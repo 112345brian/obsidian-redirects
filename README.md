@@ -9,7 +9,7 @@ Redirect stubs keep their own path and point at a canonical target:
 
 ```yaml
 ---
-redirect_to: "Mathematics#Vector"
+redirect_to: "[[Mathematics#Vector]]"
 ---
 ```
 
@@ -19,7 +19,7 @@ verifiable rather than implicit aliases:
 ```yaml
 ---
 redirects_from:
-  - "Legacy/vector"
+  - "[[Legacy/vector]]"
 ---
 ```
 
@@ -29,9 +29,9 @@ disambiguation page:
 ```yaml
 ---
 disambiguates:
-  - "Mathematics#Vector"
-  - "Physics#Vector"
-  - "Programming/Vector"
+  - "[[Mathematics#Vector]]"
+  - "[[Physics#Vector]]"
+  - "[[Programming/Vector]]"
 ---
 ```
 
