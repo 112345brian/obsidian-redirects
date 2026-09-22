@@ -7,8 +7,8 @@ import { Notice, Plugin } from 'obsidian';
 export default class RedirectsPlugin extends Plugin {
 	onload(): void {
 		this.addCommand({
-			id: 'validate-redirects',
-			name: 'Validate redirects',
+			id: 'validate',
+			name: 'Validate',
 			callback: () => {
 				new Notice('Redirect validation is not implemented yet.');
 			},
