@@ -1,7 +1,7 @@
 {
 	"id": "redirects",
 	"name": "Redirects",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"minAppVersion": "1.0.0",
 	"description": "Frontmatter-driven redirects and disambiguation for Obsidian.",
 	"author": "Brian",
