@@ -5,9 +5,11 @@ import {
 	insertQualifiedLink,
 	repairReciprocals,
 } from './authoring/commands';
+import { DEFAULT_PLUGIN_DATA, RedirectsPluginData, mergePluginData } from './data/plugin-data';
 import { ObsidianVaultSource } from './obsidian-adapter';
 import { DisambiguationRouter } from './navigation/disambiguation-router';
 import { RedirectNavigator } from './navigation/navigator';
+import { showPromotableLinks } from './promotable/router';
 import { RedirectRegistry } from './registry/registry';
 import { HealthReportModal } from './ui/health-modal';
 
@@ -17,8 +19,11 @@ export default class RedirectsPlugin extends Plugin {
 	registry?: RedirectRegistry;
 	navigator?: RedirectNavigator;
 	disambiguationRouter?: DisambiguationRouter;
+	data: RedirectsPluginData = DEFAULT_PLUGIN_DATA;
 
-	onload(): void {
+	async onload(): Promise<void> {
+		this.data = mergePluginData(await this.loadData());
+
 		const source = new ObsidianVaultSource(this.app);
 		this.navigator = new RedirectNavigator(this.app, () => this.registry);
 		this.disambiguationRouter = new DisambiguationRouter(this.app, () => this.registry);
@@ -124,6 +129,19 @@ export default class RedirectsPlugin extends Plugin {
 			id: 'insert-qualified-link',
 			name: 'Insert path-qualified link to a note, heading, or block',
 			editorCallback: (editor) => void insertQualifiedLink(this.app, editor),
+		});
+
+		this.addCommand({
+			id: 'show-promotable-unresolved-links',
+			name: 'Show promotable unresolved links',
+			callback: () =>
+				void showPromotableLinks(this.app, {
+					getData: () => this.data,
+					saveData: async (data) => {
+						this.data = data;
+						await this.saveData(data);
+					},
+				}),
 		});
 	}
 

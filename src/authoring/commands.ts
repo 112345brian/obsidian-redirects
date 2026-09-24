@@ -13,7 +13,7 @@ import {
 	REDIRECTS_FROM_KEY,
 	REDIRECT_TO_KEY,
 } from '../contract/frontmatter';
-import { formatWikilink } from '../contract/wikilink';
+import { WikilinkTarget, formatWikilink } from '../contract/wikilink';
 import { RedirectRegistry } from '../registry/registry';
 import { HealthIssue } from '../registry/health';
 import { confirmMutation } from '../ui/confirm-modal';
@@ -22,25 +22,28 @@ import { promptText } from '../ui/text-input-modal';
 import { stubFrontmatterText, withWikilinkAdded, withWikilinkRemoved } from './mutations';
 import { pickTarget } from './pick-target';
 
-function toFilePath(name: string): string {
+export function toFilePath(name: string): string {
 	const trimmed = name.trim().replace(/^\/+/, '');
 	return trimmed.toLowerCase().endsWith('.md') ? trimmed : `${trimmed}.md`;
 }
 
-export async function createRedirectStub(app: App): Promise<void> {
-	const target = await pickTarget(app);
-	if (!target) return;
-
-	const stubName = await promptText(app, 'Create redirect stub', 'e.g. Old name');
-	if (!stubName) return;
-
-	const stubPath = toFilePath(stubName);
+/**
+ * Creates a redirect stub at `stubPath` pointing at `target`, previewing the
+ * mutation first. Shared by the direct "Create redirect stub" command and
+ * the promotable-unresolved-links cue (issue #6).
+ */
+export async function createRedirectStubNamed(
+	app: App,
+	stubPath: string,
+	target: WikilinkTarget,
+): Promise<boolean> {
 	if (app.vault.getAbstractFileByPath(stubPath)) {
 		new Notice(`"${stubPath}" already exists; choose a different name.`);
-		return;
+		return false;
 	}
 
-	const targetFile = app.vault.getAbstractFileByPath(`${target.path}.md`) ?? app.vault.getAbstractFileByPath(target.path);
+	const targetFile =
+		app.vault.getAbstractFileByPath(`${target.path}.md`) ?? app.vault.getAbstractFileByPath(target.path);
 	const canonicalPath = targetFile instanceof TFile ? targetFile.path : undefined;
 
 	const preview = [
@@ -54,7 +57,7 @@ export async function createRedirectStub(app: App): Promise<void> {
 	}
 
 	const confirmed = await confirmMutation(app, 'Create redirect stub', preview);
-	if (!confirmed) return;
+	if (!confirmed) return false;
 
 	await app.vault.create(stubPath, stubFrontmatterText(REDIRECT_TO_KEY, target));
 
@@ -69,6 +72,17 @@ export async function createRedirectStub(app: App): Promise<void> {
 	}
 
 	new Notice(`Created redirect stub "${stubPath}".`);
+	return true;
+}
+
+export async function createRedirectStub(app: App): Promise<void> {
+	const target = await pickTarget(app);
+	if (!target) return;
+
+	const stubName = await promptText(app, 'Create redirect stub', 'e.g. Old name');
+	if (!stubName) return;
+
+	await createRedirectStubNamed(app, toFilePath(stubName), target);
 }
 
 export async function addDisambiguationCandidate(app: App): Promise<void> {
@@ -85,6 +99,19 @@ export async function addDisambiguationCandidate(app: App): Promise<void> {
 	const candidate = await pickTarget(app);
 	if (!candidate) return;
 
+	await addDisambiguationCandidateTo(app, notePath, candidate);
+}
+
+/**
+ * Adds `candidate` to `notePath`'s `disambiguates` list, creating the note
+ * first if it doesn't exist yet. Shared with the heading/note collision cue
+ * (issue #7) and the promotable-links cue (issue #6).
+ */
+export async function addDisambiguationCandidateTo(
+	app: App,
+	notePath: string,
+	candidate: WikilinkTarget,
+): Promise<boolean> {
 	const existingFile = app.vault.getAbstractFileByPath(notePath);
 	const preview = [
 		existingFile ? `Update "${notePath}":` : `Create "${notePath}" with:`,
@@ -92,20 +119,21 @@ export async function addDisambiguationCandidate(app: App): Promise<void> {
 	];
 
 	const confirmed = await confirmMutation(app, 'Add disambiguation candidate', preview);
-	if (!confirmed) return;
+	if (!confirmed) return false;
 
 	let file = existingFile;
 	if (!(file instanceof TFile)) {
 		await app.vault.create(notePath, '---\n---\n');
 		file = app.vault.getAbstractFileByPath(notePath);
 	}
-	if (!(file instanceof TFile)) return;
+	if (!(file instanceof TFile)) return false;
 
 	await app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
 		fm[DISAMBIGUATES_KEY] = withWikilinkAdded(fm[DISAMBIGUATES_KEY], candidate);
 	});
 
 	new Notice(`Added "${formatWikilink(candidate)}" to "${notePath}".`);
+	return true;
 }
 
 function reciprocalIssues(registry: RedirectRegistry | undefined): HealthIssue[] {
