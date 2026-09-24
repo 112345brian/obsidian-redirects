@@ -28,23 +28,25 @@ export interface ResolvedTarget {
 export class VaultIndex {
 	private readonly byPath = new Map<string, VaultNoteFile>();
 	private readonly byName = new Map<string, VaultNoteFile[]>();
+	private readonly byBasename = new Map<string, VaultNoteFile[]>();
 
 	constructor(files: VaultNoteFile[]) {
 		for (const file of files) {
 			this.byPath.set(normalizePath(file.path), file);
-			this.addName(file.basename, file);
-			for (const alias of file.aliases) this.addName(alias, file);
+			this.addName(this.byName, file.basename, file);
+			this.addName(this.byBasename, file.basename, file);
+			for (const alias of file.aliases) this.addName(this.byName, alias, file);
 		}
 	}
 
-	private addName(name: string, file: VaultNoteFile): void {
+	private addName(map: Map<string, VaultNoteFile[]>, name: string, file: VaultNoteFile): void {
 		const key = normalizeName(name);
 		if (!key) return;
-		const existing = this.byName.get(key);
+		const existing = map.get(key);
 		if (existing) {
 			if (!existing.includes(file)) existing.push(file);
 		} else {
-			this.byName.set(key, [file]);
+			map.set(key, [file]);
 		}
 	}
 
@@ -54,6 +56,11 @@ export class VaultIndex {
 
 	findByName(name: string): VaultNoteFile[] {
 		return this.byName.get(normalizeName(name)) ?? [];
+	}
+
+	/** Files whose actual basename (not an alias) matches `name`. */
+	findByBasename(name: string): VaultNoteFile[] {
+		return this.byBasename.get(normalizeName(name)) ?? [];
 	}
 }
 

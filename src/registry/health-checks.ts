@@ -11,13 +11,17 @@ import {
 	chainIssue,
 	cycleIssue,
 	duplicateClaimIssue,
+	duplicateSwallowClaimIssue,
+	invalidSwallowClaimantIssue,
 	missingReciprocalIssue,
 	promotionCandidateIssue,
 	staleReciprocalIssue,
+	staleSwallowClaimIssue,
 } from './health';
+import { VaultIndex } from './resolver';
 import { RedirectEntry, RegistryState, pathClaimKey } from './state';
 
-export function computeHealthIssues(state: RegistryState): HealthIssue[] {
+export function computeHealthIssues(state: RegistryState, index: VaultIndex): HealthIssue[] {
 	const issues: HealthIssue[] = [];
 
 	for (const [path, entry] of state.redirects) {
@@ -39,6 +43,34 @@ export function computeHealthIssues(state: RegistryState): HealthIssue[] {
 	issues.push(...checkReciprocals(state));
 	issues.push(...checkDuplicateClaims(state));
 	issues.push(...checkPromotionCandidates(state));
+	issues.push(...checkSwallowClaims(state, index));
+
+	return issues;
+}
+
+function checkSwallowClaims(state: RegistryState, index: VaultIndex): HealthIssue[] {
+	const issues: HealthIssue[] = [];
+
+	for (const claim of state.invalidSwallowClaims) {
+		issues.push(invalidSwallowClaimantIssue(claim.claimant.path, claim.term));
+	}
+
+	for (const [term, claims] of state.swallowClaims) {
+		const distinctClaimants = [...new Set(claims.map((c) => c.claimant.path))];
+		if (distinctClaimants.length > 1) {
+			issues.push(duplicateSwallowClaimIssue(term, distinctClaimants));
+		}
+
+		const claimantPaths = new Set(distinctClaimants);
+		const collidingRealFile = index
+			.findByBasename(term)
+			.find((file) => !claimantPaths.has(file.path));
+		if (collidingRealFile) {
+			for (const claim of claims) {
+				issues.push(staleSwallowClaimIssue(claim.claimant.path, term, collidingRealFile.path));
+			}
+		}
+	}
 
 	return issues;
 }

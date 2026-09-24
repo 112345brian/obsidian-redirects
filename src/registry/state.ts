@@ -19,11 +19,25 @@ export interface ReciprocalClaim {
 	resolved: ResolvedTarget;
 }
 
+export interface SwallowClaim {
+	/** The canonical note declaring the claim. */
+	claimant: VaultNoteFile;
+	/** The literal display term claimed, exactly as written. */
+	term: string;
+}
+
 /** The registry's built-but-unvalidated index, consumed by the health checks. */
 export interface RegistryState {
 	redirects: Map<string, RedirectEntry>;
 	disambiguations: Map<string, DisambiguationEntry>;
 	reciprocalClaims: Map<string, ReciprocalClaim[]>;
+	/** Valid swallow claims (issue #10), keyed by the exact literal term —
+	 * claims from a redirect stub or disambiguation page are invalid and are
+	 * reported as a health issue instead of being added here. */
+	swallowClaims: Map<string, SwallowClaim[]>;
+	/** Swallow claims made by a redirect stub or disambiguation page, which
+	 * cannot claim a term; kept separately purely for the health report. */
+	invalidSwallowClaims: SwallowClaim[];
 }
 
 /**

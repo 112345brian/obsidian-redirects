@@ -12,6 +12,7 @@ import { DisambiguationRouter } from './navigation/disambiguation-router';
 import { RedirectNavigator } from './navigation/navigator';
 import { showPromotableLinks } from './promotable/router';
 import { RedirectRegistry } from './registry/registry';
+import { createSwallowEditorChangeHandler } from './swallow/router';
 import { HealthReportModal } from './ui/health-modal';
 
 const REBUILD_DEBOUNCE_MS = 500;
@@ -56,6 +57,16 @@ export default class RedirectsPlugin extends Plugin {
 				void this.navigator?.handleFileOpen(file);
 				this.disambiguationRouter?.handleFileOpen(file);
 			}),
+		);
+
+		this.registerEvent(
+			this.app.workspace.on(
+				'editor-change',
+				createSwallowEditorChangeHandler(this.app, {
+					getRegistry: () => this.registry,
+					getIgnoredFolders: () => this.data.ignoredFolders,
+				}),
+			),
 		);
 
 		this.registerEvent(

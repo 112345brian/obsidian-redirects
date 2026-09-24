@@ -79,4 +79,24 @@ describe('parseContract', () => {
 			'empty-value',
 		]);
 	});
+
+	it('parses swallows as a list of literal terms, not wikilinks', () => {
+		const result = parseContract({ swallows: ['R package', 'CRAN package'] });
+		expect(result.swallows).toEqual(['R package', 'CRAN package']);
+		expect(result.issues).toEqual([]);
+	});
+
+	it('flags swallows when not a list', () => {
+		const result = parseContract({ swallows: 'R package' });
+		expect(result.swallows).toEqual([]);
+		expect(result.issues).toEqual([
+			expect.objectContaining({ property: 'swallows', code: 'not-a-list' }),
+		]);
+	});
+
+	it('flags non-string and empty swallows entries but keeps the valid ones', () => {
+		const result = parseContract({ swallows: ['Valid term', 42, '  '] });
+		expect(result.swallows).toEqual(['Valid term']);
+		expect(result.issues.map((i) => i.code)).toEqual(['not-a-string', 'empty-value']);
+	});
 });

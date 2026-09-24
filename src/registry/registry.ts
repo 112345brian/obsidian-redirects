@@ -13,17 +13,27 @@ import {
 	RedirectEntry,
 	ReciprocalClaim,
 	RegistryState,
+	SwallowClaim,
 	claimKey,
 } from './state';
 import { VaultSource } from './types';
 
-export type { RedirectEntry, DisambiguationEntry, ReciprocalClaim } from './state';
+export type { RedirectEntry, DisambiguationEntry, ReciprocalClaim, SwallowClaim } from './state';
+
+export interface SwallowResolution {
+	status: 'none' | 'unambiguous' | 'ambiguous' | 'collides-with-note';
+	canonicalPath?: string;
+	/** Every valid claimant path, when status is 'ambiguous'. */
+	candidatePaths?: string[];
+}
 
 export class RedirectRegistry {
 	private state: RegistryState = {
 		redirects: new Map(),
 		disambiguations: new Map(),
 		reciprocalClaims: new Map(),
+		swallowClaims: new Map(),
+		invalidSwallowClaims: [],
 	};
 	private health: HealthIssue[] = [];
 	private index: VaultIndex;
@@ -41,6 +51,8 @@ export class RedirectRegistry {
 		const redirects = new Map<string, RedirectEntry>();
 		const disambiguations = new Map<string, DisambiguationEntry>();
 		const reciprocalClaims = new Map<string, ReciprocalClaim[]>();
+		const swallowClaims = new Map<string, SwallowClaim[]>();
+		const invalidSwallowClaims: SwallowClaim[] = [];
 
 		for (const file of files) {
 			const contract = parseContract(file.frontmatter);
@@ -75,10 +87,32 @@ export class RedirectRegistry {
 					else reciprocalClaims.set(key, [claim]);
 				}
 			}
+
+			if (contract.swallows.length > 0) {
+				// Only a canonical note (neither a redirect stub nor a
+				// disambiguation page) may claim a term.
+				const isValidClaimant = !contract.redirectTo && contract.disambiguates.length === 0;
+				for (const term of contract.swallows) {
+					const claim: SwallowClaim = { claimant: file, term };
+					if (!isValidClaimant) {
+						invalidSwallowClaims.push(claim);
+						continue;
+					}
+					const existing = swallowClaims.get(term);
+					if (existing) existing.push(claim);
+					else swallowClaims.set(term, [claim]);
+				}
+			}
 		}
 
-		this.state = { redirects, disambiguations, reciprocalClaims };
-		this.health = computeHealthIssues(this.state);
+		this.state = {
+			redirects,
+			disambiguations,
+			reciprocalClaims,
+			swallowClaims,
+			invalidSwallowClaims,
+		};
+		this.health = computeHealthIssues(this.state, this.index);
 	}
 
 	getRedirect(path: string): RedirectEntry | undefined {
@@ -118,5 +152,33 @@ export class RedirectRegistry {
 
 	getHealthReport(): HealthIssue[] {
 		return this.health;
+	}
+
+	/**
+	 * Resolves a literal display term against swallow claims (issue #10). A
+	 * term that already names a real, different note is 'collides-with-note'
+	 * — the claim can never safely override an existing file, so callers must
+	 * never auto-rewrite in that case.
+	 */
+	getSwallowResolution(term: string): SwallowResolution {
+		const trimmed = term.trim();
+		if (!trimmed) return { status: 'none' };
+
+		const claims = this.state.swallowClaims.get(trimmed) ?? [];
+		const claimantPaths = new Set(claims.map((c) => c.claimant.path));
+
+		const collidingRealFile = this.index
+			.findByBasename(trimmed)
+			.find((file) => !claimantPaths.has(file.path));
+		if (collidingRealFile) {
+			return { status: 'collides-with-note', canonicalPath: collidingRealFile.path };
+		}
+
+		if (claims.length === 0) return { status: 'none' };
+		if (claims.length > 1) {
+			return { status: 'ambiguous', candidatePaths: claims.map((c) => c.claimant.path) };
+		}
+
+		return { status: 'unambiguous', canonicalPath: claims[0]!.claimant.path };
 	}
 }

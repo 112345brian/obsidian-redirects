@@ -7,7 +7,10 @@ export type HealthIssueType =
 	| 'missing-reciprocal'
 	| 'stale-reciprocal'
 	| 'duplicate-claim'
-	| 'promotion-candidate';
+	| 'promotion-candidate'
+	| 'invalid-swallow-claimant'
+	| 'duplicate-swallow-claim'
+	| 'stale-swallow-claim';
 
 export interface HealthIssue {
 	type: HealthIssueType;
@@ -91,5 +94,31 @@ export function promotionCandidateIssue(path: string): HealthIssue {
 		type: 'promotion-candidate',
 		path,
 		message: `"${path}" is a redirect stub with body content; consider promoting it to a canonical note.`,
+	};
+}
+
+export function invalidSwallowClaimantIssue(path: string, term: string): HealthIssue {
+	return {
+		type: 'invalid-swallow-claimant',
+		path,
+		message: `"${path}" claims "${term}" in swallows, but a redirect stub or disambiguation page cannot claim a term.`,
+	};
+}
+
+export function duplicateSwallowClaimIssue(term: string, claimants: string[]): HealthIssue {
+	return {
+		type: 'duplicate-swallow-claim',
+		path: claimants[0]!,
+		message: `"${term}" is claimed in swallows by multiple notes: ${claimants.join(', ')}.`,
+		related: claimants,
+	};
+}
+
+export function staleSwallowClaimIssue(path: string, term: string, existingNotePath: string): HealthIssue {
+	return {
+		type: 'stale-swallow-claim',
+		path,
+		message: `"${path}" claims "${term}" in swallows, but "${existingNotePath}" already exists under that exact name; the claim can never take effect.`,
+		related: [existingNotePath],
 	};
 }

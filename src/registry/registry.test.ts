@@ -208,6 +208,70 @@ describe('RedirectRegistry', () => {
 		expect(registry.getHealthReport()).toEqual([]);
 	});
 
+	it('resolves an unambiguous swallow claim', () => {
+		const registry = new RedirectRegistry(
+			vaultOf([file({ path: 'software-library.md', frontmatter: { swallows: ['R package'] } })]),
+		);
+		expect(registry.getSwallowResolution('R package')).toEqual({
+			status: 'unambiguous',
+			canonicalPath: 'software-library.md',
+		});
+		expect(registry.getHealthReport()).toEqual([]);
+	});
+
+	it('reports a duplicate swallow claim as ambiguous and unresolvable', () => {
+		const registry = new RedirectRegistry(
+			vaultOf([
+				file({ path: 'A.md', frontmatter: { swallows: ['R package'] } }),
+				file({ path: 'B.md', frontmatter: { swallows: ['R package'] } }),
+			]),
+		);
+		expect(registry.getSwallowResolution('R package')).toEqual({
+			status: 'ambiguous',
+			candidatePaths: ['A.md', 'B.md'],
+		});
+		expect(registry.getHealthReport()).toEqual([
+			expect.objectContaining({ type: 'duplicate-swallow-claim' }),
+		]);
+	});
+
+	it('flags a redirect stub or disambiguation page claiming a term as invalid', () => {
+		const registry = new RedirectRegistry(
+			vaultOf([
+				file({
+					path: 'Stub.md',
+					frontmatter: { redirect_to: '[[Canonical]]', swallows: ['R package'] },
+				}),
+				file({ path: 'Canonical.md' }),
+			]),
+		);
+		expect(registry.getSwallowResolution('R package')).toEqual({ status: 'none' });
+		expect(registry.getHealthReport()).toEqual(
+			expect.arrayContaining([expect.objectContaining({ type: 'invalid-swallow-claimant' })]),
+		);
+	});
+
+	it('never lets a swallow claim override an existing note with the exact same name', () => {
+		const registry = new RedirectRegistry(
+			vaultOf([
+				file({ path: 'Library.md', frontmatter: { swallows: ['R package'] } }),
+				file({ path: 'R package.md' }),
+			]),
+		);
+		expect(registry.getSwallowResolution('R package')).toEqual({
+			status: 'collides-with-note',
+			canonicalPath: 'R package.md',
+		});
+		expect(registry.getHealthReport()).toEqual([
+			expect.objectContaining({ type: 'stale-swallow-claim', path: 'Library.md' }),
+		]);
+	});
+
+	it('reports no swallow resolution for an unclaimed term', () => {
+		const registry = new RedirectRegistry(vaultOf([file({ path: 'A.md' })]));
+		expect(registry.getSwallowResolution('Nothing claims this')).toEqual({ status: 'none' });
+	});
+
 	it('does not mutate any vault file while building or validating', () => {
 		const stub = file({ path: 'Stub.md', frontmatter: { redirect_to: '[[Canonical]]' } });
 		const canonical = file({ path: 'Canonical.md' });

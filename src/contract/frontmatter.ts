@@ -8,11 +8,16 @@
  *     - "[[Old name]]"                              (list of wikilinks)
  *   disambiguates:
  *     - "[[Candidate A]]"                           (list of wikilinks)
+ *   swallows:
+ *     - "R package"                                 (list of literal terms)
  *
  * `redirect_to` is the source of truth for where a stub points.
  * `redirects_from` is a reciprocal declaration used only for indexing and
  * validation — the registry (issue #2) treats a mismatch as a warning, not
- * an error, and never rewrites files.
+ * an error, and never rewrites files. `swallows` (issue #10) is different in
+ * kind: its entries are literal display terms a canonical note claims, not
+ * wikilinks — an unqualified `[[term]]` written elsewhere gets path-qualified
+ * at authoring time, never a stub or disambiguation page's own property.
  */
 
 import { parseWikilink, WikilinkTarget } from './wikilink';
@@ -20,6 +25,7 @@ import { parseWikilink, WikilinkTarget } from './wikilink';
 export const REDIRECT_TO_KEY = 'redirect_to';
 export const REDIRECTS_FROM_KEY = 'redirects_from';
 export const DISAMBIGUATES_KEY = 'disambiguates';
+export const SWALLOWS_KEY = 'swallows';
 
 export type ContractIssueCode =
 	| 'not-a-string'
@@ -40,6 +46,10 @@ export interface ParsedContract {
 	redirectTo?: WikilinkTarget;
 	redirectsFrom: WikilinkTarget[];
 	disambiguates: WikilinkTarget[];
+	/** Literal display terms this note claims (issue #10) — plain strings,
+	 * not wikilinks, since a swallow claim owns an unqualified display term
+	 * rather than pointing at a target. */
+	swallows: string[];
 	issues: ContractIssue[];
 }
 
@@ -56,6 +66,7 @@ export function parseContract(
 	const result: ParsedContract = {
 		redirectsFrom: [],
 		disambiguates: [],
+		swallows: [],
 		issues,
 	};
 
@@ -86,7 +97,55 @@ export function parseContract(
 		);
 	}
 
+	if (SWALLOWS_KEY in frontmatter) {
+		result.swallows = parseStringListProperty(SWALLOWS_KEY, frontmatter[SWALLOWS_KEY], issues);
+	}
+
 	return result;
+}
+
+function parseStringListProperty(
+	property: string,
+	value: unknown,
+	issues: ContractIssue[],
+): string[] {
+	if (!Array.isArray(value)) {
+		issues.push({
+			property,
+			code: 'not-a-list',
+			message: `"${property}" must be a list of literal display-term strings.`,
+			value,
+		});
+		return [];
+	}
+
+	const terms: string[] = [];
+	value.forEach((entry, index) => {
+		if (typeof entry !== 'string') {
+			issues.push({
+				property,
+				code: 'not-a-string',
+				message: `"${property}[${index}]" must be a string.`,
+				index,
+				value: entry,
+			});
+			return;
+		}
+		const trimmed = entry.trim();
+		if (!trimmed) {
+			issues.push({
+				property,
+				code: 'empty-value',
+				message: `"${property}[${index}]" is empty.`,
+				index,
+				value: entry,
+			});
+			return;
+		}
+		terms.push(trimmed);
+	});
+
+	return terms;
 }
 
 function parseSingleWikilinkProperty(
