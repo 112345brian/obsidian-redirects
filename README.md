@@ -79,10 +79,14 @@ health-report diagnostic instead.
   instant it's closed; an unambiguous `swallows` claim rewrites it in place to
   a path-qualified `[[canonical|Term]]` (one undo step reverts it), a
   duplicate claim opens a chooser, and a term that collides with a real
-  note's exact name is never overridden.
+  note's exact name is never overridden. If the term is already an alias on
+  some other, unrelated note, a dialog asks whether to consolidate (remove
+  that alias) before proceeding, proceed without touching it, or cancel —
+  the claim never silently competes with an existing alias.
 - **Health report** ("Show redirect health report") — broken targets,
   redirect cycles/chains, missing or stale reciprocal declarations, and
-  invalid/duplicate/stale `swallows` claims, all in one read-only view.
+  invalid/duplicate/stale `swallows` claims (including a claim that
+  conflicts with an existing alias elsewhere), all in one read-only view.
 
 ## Settings
 
@@ -124,6 +128,7 @@ check by hand, on both desktop and mobile:
 | "Create redirect stub" end-to-end, then verify the reciprocal | ☐ | ☐ |
 | Type a bare `[[Term]]` matching one `swallows` claim → auto-qualified | ☐ | ☐ |
 | Type a bare `[[Term]]` matching two `swallows` claims → chooser | ☐ | ☐ |
+| Type a bare `[[Term]]` matching a claim that's also an alias elsewhere → consolidate/proceed/cancel dialog | ☐ | ☐ |
 | Rename/move a canonical note → `redirect_to`/`redirects_from` still resolve | ☐ | ☐ |
 | "Show redirect health report" reflects a freshly broken target | ☐ | ☐ |
 

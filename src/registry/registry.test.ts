@@ -272,6 +272,47 @@ describe('RedirectRegistry', () => {
 		expect(registry.getSwallowResolution('Nothing claims this')).toEqual({ status: 'none' });
 	});
 
+	it('surfaces an unambiguous claim that conflicts with an unrelated alias', () => {
+		const registry = new RedirectRegistry(
+			vaultOf([
+				file({ path: 'software-library.md', frontmatter: { swallows: ['R package'] } }),
+				file({ path: 'Old library.md', aliases: ['R package'] }),
+			]),
+		);
+		expect(registry.getSwallowResolution('R package')).toEqual({
+			status: 'unambiguous',
+			canonicalPath: 'software-library.md',
+			aliasConflictPaths: ['Old library.md'],
+		});
+		expect(registry.getHealthReport()).toEqual([
+			expect.objectContaining({
+				type: 'swallow-alias-conflict',
+				path: 'software-library.md',
+				related: ['Old library.md'],
+			}),
+		]);
+	});
+
+	it('does not report an alias conflict for an ambiguous or colliding claim', () => {
+		const ambiguous = new RedirectRegistry(
+			vaultOf([
+				file({ path: 'A.md', frontmatter: { swallows: ['R package'] } }),
+				file({ path: 'B.md', frontmatter: { swallows: ['R package'] } }),
+				file({ path: 'Old library.md', aliases: ['R package'] }),
+			]),
+		);
+		expect(ambiguous.getHealthReport().map((i) => i.type)).not.toContain('swallow-alias-conflict');
+
+		const colliding = new RedirectRegistry(
+			vaultOf([
+				file({ path: 'Library.md', frontmatter: { swallows: ['R package'] } }),
+				file({ path: 'R package.md' }),
+				file({ path: 'Old library.md', aliases: ['R package'] }),
+			]),
+		);
+		expect(colliding.getHealthReport().map((i) => i.type)).not.toContain('swallow-alias-conflict');
+	});
+
 	it('does not mutate any vault file while building or validating', () => {
 		const stub = file({ path: 'Stub.md', frontmatter: { redirect_to: '[[Canonical]]' } });
 		const canonical = file({ path: 'Canonical.md' });

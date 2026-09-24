@@ -29,13 +29,17 @@ export class VaultIndex {
 	private readonly byPath = new Map<string, VaultNoteFile>();
 	private readonly byName = new Map<string, VaultNoteFile[]>();
 	private readonly byBasename = new Map<string, VaultNoteFile[]>();
+	private readonly byAlias = new Map<string, VaultNoteFile[]>();
 
 	constructor(files: VaultNoteFile[]) {
 		for (const file of files) {
 			this.byPath.set(normalizePath(file.path), file);
 			this.addName(this.byName, file.basename, file);
 			this.addName(this.byBasename, file.basename, file);
-			for (const alias of file.aliases) this.addName(this.byName, alias, file);
+			for (const alias of file.aliases) {
+				this.addName(this.byName, alias, file);
+				this.addName(this.byAlias, alias, file);
+			}
 		}
 	}
 
@@ -61,6 +65,11 @@ export class VaultIndex {
 	/** Files whose actual basename (not an alias) matches `name`. */
 	findByBasename(name: string): VaultNoteFile[] {
 		return this.byBasename.get(normalizeName(name)) ?? [];
+	}
+
+	/** Files that declare `name` as an alias (not their basename). */
+	findByAlias(name: string): VaultNoteFile[] {
+		return this.byAlias.get(normalizeName(name)) ?? [];
 	}
 }
 

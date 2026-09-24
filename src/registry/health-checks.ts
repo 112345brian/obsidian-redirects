@@ -17,6 +17,7 @@ import {
 	promotionCandidateIssue,
 	staleReciprocalIssue,
 	staleSwallowClaimIssue,
+	swallowAliasConflictIssue,
 } from './health';
 import { VaultIndex } from './resolver';
 import { RedirectEntry, RegistryState, pathClaimKey } from './state';
@@ -68,6 +69,20 @@ function checkSwallowClaims(state: RegistryState, index: VaultIndex): HealthIssu
 		if (collidingRealFile) {
 			for (const claim of claims) {
 				issues.push(staleSwallowClaimIssue(claim.claimant.path, term, collidingRealFile.path));
+			}
+			continue;
+		}
+
+		// Only worth flagging once the claim is otherwise unambiguous and
+		// valid — a duplicate or colliding claim already has its own
+		// diagnostic, and piling this on top wouldn't be actionable.
+		if (distinctClaimants.length === 1) {
+			const aliasHolderPaths = index
+				.findByAlias(term)
+				.map((file) => file.path)
+				.filter((path) => !claimantPaths.has(path));
+			if (aliasHolderPaths.length > 0) {
+				issues.push(swallowAliasConflictIssue(distinctClaimants[0]!, term, aliasHolderPaths));
 			}
 		}
 	}
