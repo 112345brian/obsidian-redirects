@@ -1,5 +1,6 @@
-import { Plugin, debounce } from 'obsidian';
+import { Plugin, TFile, debounce } from 'obsidian';
 import { ObsidianVaultSource } from './obsidian-adapter';
+import { RedirectNavigator } from './navigation/navigator';
 import { RedirectRegistry } from './registry/registry';
 import { HealthReportModal } from './ui/health-modal';
 
@@ -7,9 +8,11 @@ const REBUILD_DEBOUNCE_MS = 500;
 
 export default class RedirectsPlugin extends Plugin {
 	registry?: RedirectRegistry;
+	navigator?: RedirectNavigator;
 
 	onload(): void {
 		const source = new ObsidianVaultSource(this.app);
+		this.navigator = new RedirectNavigator(this.app, () => this.registry);
 
 		const rebuild = debounce(
 			() => this.registry?.rebuild(source),
@@ -33,6 +36,27 @@ export default class RedirectsPlugin extends Plugin {
 		this.registerEvent(this.app.vault.on('rename', rebuild));
 		this.register(() => rebuild.cancel());
 
+		this.registerEvent(
+			this.app.workspace.on('file-open', (file) => {
+				void this.navigator?.handleFileOpen(file);
+			}),
+		);
+
+		this.registerEvent(
+			this.app.workspace.on('file-menu', (menu, file) => {
+				if (!(file instanceof TFile)) return;
+				if (!this.registry?.getRedirect(file.path)) return;
+				menu.addItem((item) => {
+					item
+						.setTitle('Open without following redirect')
+						.setIcon('corner-up-left')
+						.onClick(() => {
+							void this.navigator?.openBypassingRedirect(file.path);
+						});
+				});
+			}),
+		);
+
 		this.addCommand({
 			id: 'show-redirect-health-report',
 			name: 'Show redirect health report',
@@ -41,6 +65,17 @@ export default class RedirectsPlugin extends Plugin {
 					this.app,
 					() => this.registry?.getHealthReport() ?? [],
 				).open();
+			},
+		});
+
+		this.addCommand({
+			id: 'open-original-redirect-stub',
+			name: 'Open original redirect stub',
+			checkCallback: (checking) => {
+				const stubPath = this.navigator?.getLastStubPath();
+				if (!stubPath) return false;
+				if (!checking) void this.navigator?.openBypassingRedirect(stubPath);
+				return true;
 			},
 		});
 	}
