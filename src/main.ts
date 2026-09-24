@@ -1,5 +1,6 @@
 import { Plugin, TFile, debounce } from 'obsidian';
 import { ObsidianVaultSource } from './obsidian-adapter';
+import { DisambiguationRouter } from './navigation/disambiguation-router';
 import { RedirectNavigator } from './navigation/navigator';
 import { RedirectRegistry } from './registry/registry';
 import { HealthReportModal } from './ui/health-modal';
@@ -9,10 +10,12 @@ const REBUILD_DEBOUNCE_MS = 500;
 export default class RedirectsPlugin extends Plugin {
 	registry?: RedirectRegistry;
 	navigator?: RedirectNavigator;
+	disambiguationRouter?: DisambiguationRouter;
 
 	onload(): void {
 		const source = new ObsidianVaultSource(this.app);
 		this.navigator = new RedirectNavigator(this.app, () => this.registry);
+		this.disambiguationRouter = new DisambiguationRouter(this.app, () => this.registry);
 
 		const rebuild = debounce(
 			() => this.registry?.rebuild(source),
@@ -39,21 +42,35 @@ export default class RedirectsPlugin extends Plugin {
 		this.registerEvent(
 			this.app.workspace.on('file-open', (file) => {
 				void this.navigator?.handleFileOpen(file);
+				this.disambiguationRouter?.handleFileOpen(file);
 			}),
 		);
 
 		this.registerEvent(
 			this.app.workspace.on('file-menu', (menu, file) => {
 				if (!(file instanceof TFile)) return;
-				if (!this.registry?.getRedirect(file.path)) return;
-				menu.addItem((item) => {
-					item
-						.setTitle('Open without following redirect')
-						.setIcon('corner-up-left')
-						.onClick(() => {
-							void this.navigator?.openBypassingRedirect(file.path);
-						});
-				});
+
+				if (this.registry?.getRedirect(file.path)) {
+					menu.addItem((item) => {
+						item
+							.setTitle('Open without following redirect')
+							.setIcon('corner-up-left')
+							.onClick(() => {
+								void this.navigator?.openBypassingRedirect(file.path);
+							});
+					});
+				}
+
+				if (this.registry?.getDisambiguation(file.path)) {
+					menu.addItem((item) => {
+						item
+							.setTitle('Open without showing chooser')
+							.setIcon('corner-up-left')
+							.onClick(() => {
+								void this.disambiguationRouter?.openBypassingChooser(file.path);
+							});
+					});
+				}
 			}),
 		);
 
