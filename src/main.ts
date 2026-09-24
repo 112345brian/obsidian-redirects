@@ -5,6 +5,7 @@ import {
 	insertQualifiedLink,
 	repairReciprocals,
 } from './authoring/commands';
+import { showHeadingCollisions } from './collision/router';
 import { DEFAULT_PLUGIN_DATA, RedirectsPluginData, mergePluginData } from './data/plugin-data';
 import { ObsidianVaultSource } from './obsidian-adapter';
 import { DisambiguationRouter } from './navigation/disambiguation-router';
@@ -136,6 +137,19 @@ export default class RedirectsPlugin extends Plugin {
 			name: 'Show promotable unresolved links',
 			callback: () =>
 				void showPromotableLinks(this.app, {
+					getData: () => this.data,
+					saveData: async (data) => {
+						this.data = data;
+						await this.saveData(data);
+					},
+				}),
+		});
+
+		this.addCommand({
+			id: 'show-heading-note-collisions',
+			name: 'Show heading / note collisions',
+			callback: () =>
+				void showHeadingCollisions(this.app, source, {
 					getData: () => this.data,
 					saveData: async (data) => {
 						this.data = data;

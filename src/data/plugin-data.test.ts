@@ -15,11 +15,13 @@ describe('mergePluginData', () => {
 				dismissedPromotableTargets: ['term'],
 				promotableThreshold: 3,
 				ignoredFolders: ['Templates'],
+				handledHeadingCollisions: ['A.md#vector'],
 			}),
 		).toEqual({
 			dismissedPromotableTargets: ['term'],
 			promotableThreshold: 3,
 			ignoredFolders: ['Templates'],
+			handledHeadingCollisions: ['A.md#vector'],
 		});
 	});
 

@@ -7,12 +7,17 @@ export interface RedirectsPluginData {
 	promotableThreshold: number;
 	/** Vault-relative folders excluded from the promotable-links scan. */
 	ignoredFolders: string[];
+	/** Keys (see `collisionKey`) of heading/note collisions (issue #7) the
+	 * user has already linked, registered as a local landing section, or
+	 * dismissed — any of the three means "already handled". */
+	handledHeadingCollisions: string[];
 }
 
 export const DEFAULT_PLUGIN_DATA: RedirectsPluginData = {
 	dismissedPromotableTargets: [],
 	promotableThreshold: 2,
 	ignoredFolders: [],
+	handledHeadingCollisions: [],
 };
 
 export function mergePluginData(loaded: unknown): RedirectsPluginData {
@@ -28,5 +33,8 @@ export function mergePluginData(loaded: unknown): RedirectsPluginData {
 		ignoredFolders: Array.isArray(data.ignoredFolders)
 			? data.ignoredFolders.filter((v): v is string => typeof v === 'string')
 			: DEFAULT_PLUGIN_DATA.ignoredFolders,
+		handledHeadingCollisions: Array.isArray(data.handledHeadingCollisions)
+			? data.handledHeadingCollisions.filter((v): v is string => typeof v === 'string')
+			: DEFAULT_PLUGIN_DATA.handledHeadingCollisions,
 	};
 }
