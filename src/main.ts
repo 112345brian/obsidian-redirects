@@ -14,6 +14,7 @@ import { showPromotableLinks } from './promotable/router';
 import { RedirectRegistry } from './registry/registry';
 import { createSwallowEditorChangeHandler } from './swallow/router';
 import { HealthReportModal } from './ui/health-modal';
+import { RedirectsSettingTab } from './ui/settings-tab';
 
 const REBUILD_DEBOUNCE_MS = 500;
 
@@ -168,6 +169,16 @@ export default class RedirectsPlugin extends Plugin {
 					},
 				}),
 		});
+
+		this.addSettingTab(
+			new RedirectsSettingTab(this.app, this, {
+				getData: () => this.data,
+				saveData: async (data) => {
+					this.data = data;
+					await this.saveData(data);
+				},
+			}),
+		);
 	}
 
 	onunload(): void {}
