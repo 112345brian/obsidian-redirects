@@ -1,4 +1,10 @@
 import { Plugin, TFile, debounce } from 'obsidian';
+import {
+	addDisambiguationCandidate,
+	createRedirectStub,
+	insertQualifiedLink,
+	repairReciprocals,
+} from './authoring/commands';
 import { ObsidianVaultSource } from './obsidian-adapter';
 import { DisambiguationRouter } from './navigation/disambiguation-router';
 import { RedirectNavigator } from './navigation/navigator';
@@ -94,6 +100,30 @@ export default class RedirectsPlugin extends Plugin {
 				if (!checking) void this.navigator?.openBypassingRedirect(stubPath);
 				return true;
 			},
+		});
+
+		this.addCommand({
+			id: 'create-redirect-stub',
+			name: 'Create redirect stub',
+			callback: () => void createRedirectStub(this.app),
+		});
+
+		this.addCommand({
+			id: 'add-disambiguation-candidate',
+			name: 'Add disambiguation candidate',
+			callback: () => void addDisambiguationCandidate(this.app),
+		});
+
+		this.addCommand({
+			id: 'repair-reciprocal-declaration',
+			name: 'Repair a reciprocal redirect declaration',
+			callback: () => void repairReciprocals(this.app, this.registry),
+		});
+
+		this.addCommand({
+			id: 'insert-qualified-link',
+			name: 'Insert path-qualified link to a note, heading, or block',
+			editorCallback: (editor) => void insertQualifiedLink(this.app, editor),
 		});
 	}
 

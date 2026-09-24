@@ -2,7 +2,7 @@
 	"id": "redirects",
 	"name": "Redirects",
 	"version": "1.0.0",
-	"minAppVersion": "1.0.0",
+	"minAppVersion": "1.4.4",
 	"description": "Properties-first redirects and disambiguation for native Obsidian wikilinks.",
 	"isDesktopOnly": false
 }

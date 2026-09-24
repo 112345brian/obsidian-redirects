@@ -140,11 +140,14 @@ function checkReciprocals(state: RegistryState): HealthIssue[] {
 
 	for (const claims of reciprocalClaims.values()) {
 		for (const claim of claims) {
+			// `related` carries the claim's exact raw wikilink text (not a
+			// resolved path) so a repair command can remove precisely the
+			// entry that is actually written in `redirects_from`.
 			if (!claim.resolved.file) {
 				issues.push(
 					staleReciprocalIssue(
 						claim.claimant.path,
-						claim.target.path,
+						claim.target.raw,
 						'that note cannot be resolved',
 					),
 				);
@@ -158,7 +161,7 @@ function checkReciprocals(state: RegistryState): HealthIssue[] {
 				issues.push(
 					staleReciprocalIssue(
 						claim.claimant.path,
-						stubPath,
+						claim.target.raw,
 						'that note has no redirect_to declared',
 					),
 				);
@@ -173,7 +176,7 @@ function checkReciprocals(state: RegistryState): HealthIssue[] {
 				issues.push(
 					staleReciprocalIssue(
 						claim.claimant.path,
-						stubPath,
+						claim.target.raw,
 						"that note's redirect_to does not point back here",
 					),
 				);
