@@ -17,6 +17,7 @@ describe('mergePluginData', () => {
 				ignoredFolders: ['Templates'],
 				handledHeadingCollisions: ['A.md#vector'],
 				dismissedSwallowPrompts: ['A.md::R package'],
+				autoSyncReciprocals: false,
 			}),
 		).toEqual({
 			dismissedPromotableTargets: ['term'],
@@ -24,6 +25,7 @@ describe('mergePluginData', () => {
 			ignoredFolders: ['Templates'],
 			handledHeadingCollisions: ['A.md#vector'],
 			dismissedSwallowPrompts: ['A.md::R package'],
+			autoSyncReciprocals: false,
 		});
 	});
 

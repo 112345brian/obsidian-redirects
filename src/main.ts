@@ -1,4 +1,4 @@
-import { Plugin, TFile, debounce } from 'obsidian';
+import { Notice, Plugin, TFile, debounce } from 'obsidian';
 import {
 	addDisambiguationCandidate,
 	createRedirectStub,
@@ -11,7 +11,7 @@ import { ObsidianVaultSource } from './obsidian-adapter';
 import { RedirectNavigator } from './navigation/navigator';
 import { showPromotableLinks } from './promotable/router';
 import { RedirectRegistry } from './registry/registry';
-import { syncMissingReciprocals } from './registry/reciprocal-sync';
+import { applyReciprocalFix, syncMissingReciprocals } from './registry/reciprocal-sync';
 import { createNewClaimHandler } from './swallow/new-claim-router';
 import { SwallowRouterOptions, createSwallowChangeHandler } from './swallow/router';
 import { HealthReportModal } from './ui/health-modal';
@@ -45,8 +45,12 @@ export default class RedirectsPlugin extends Plugin {
 				this.registry?.rebuild(source);
 				// A missing redirects_from entry is a deterministic consequence of
 				// redirect_to, not a judgment call, so it's synced automatically
-				// right after every rebuild — see reciprocal-sync.ts.
-				if (this.registry) void syncMissingReciprocals(this.app, this.registry);
+				// right after every rebuild — see reciprocal-sync.ts. Opt-out via
+				// the "Auto-sync missing reciprocal declarations" setting still
+				// leaves it visible in the health report with a one-click "Fix".
+				if (this.registry && this.data.autoSyncReciprocals) {
+					void syncMissingReciprocals(this.app, this.registry);
+				}
 			},
 			REBUILD_DEBOUNCE_MS,
 			true,
@@ -113,6 +117,10 @@ export default class RedirectsPlugin extends Plugin {
 				new HealthReportModal(
 					this.app,
 					() => this.registry?.getHealthReport() ?? [],
+					async (issue) => {
+						const applied = await applyReciprocalFix(this.app, issue);
+						if (applied) new Notice(`Repaired reciprocal declaration on "${issue.path}".`);
+					},
 				).open();
 			},
 		});

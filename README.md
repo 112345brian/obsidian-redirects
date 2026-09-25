@@ -65,10 +65,15 @@ diagnostic instead.
 - **Reciprocal auto-sync** — a stub's `redirect_to` is the only source of
   truth needed for its canonical note's `redirects_from` entry, so a missing
   one is added automatically after every save, with a summary Notice — no
-  command to remember to run. A *stale* reciprocal (one that no longer
-  matches reality) is left for the "Repair a reciprocal redirect
-  declaration" command, since removing text based on a guess at intent
-  risks discarding a typo the user meant to fix, not delete.
+  command to remember to run. Turn this off with the "Auto-sync missing
+  reciprocal declarations" setting if you'd rather apply it yourself; either
+  way, a missing (or stale) reciprocal also gets a one-click "Fix" button
+  right in the health report — pressing it *is* the confirmation, since the
+  report already showed what it claims and why. A *stale* reciprocal (one
+  that no longer matches reality) is never auto-applied even with the
+  setting on: removing text based on a guess at intent risks discarding a
+  typo the user meant to fix, not delete, so it always takes the "Fix"
+  button or the "Repair a reciprocal redirect declaration" command.
 - **Authoring commands** — "Create redirect stub", "Add disambiguation
   candidate", "Insert path-qualified link…", and "Repair a reciprocal redirect
   declaration" all pick targets by full vault-relative path and preview every
@@ -111,6 +116,11 @@ that judgment call changes.*
 
 ## Settings
 
+- **Auto-sync missing reciprocal declarations** — add a missing
+  `redirects_from` entry automatically after every save (default on). Off
+  just means applying it yourself, via the health report's "Fix" button or
+  the "Repair a reciprocal redirect declaration" command — the check itself
+  always runs either way.
 - **Promotable link threshold** — minimum distinct source notes before an
   unresolved link is surfaced (default 2).
 - **Ignored folders** — vault-relative folders excluded from the
@@ -147,6 +157,8 @@ check by hand, on both desktop and mobile:
 | "Open without following redirect" from the file menu | ☐ | ☐ |
 | "Create redirect stub" end-to-end, then verify the reciprocal | ☐ | ☐ |
 | Manually add `redirect_to` to a note (no reciprocal yet), save → the target note gets `redirects_from` automatically | ☐ | ☐ |
+| Turn off "Auto-sync missing reciprocal declarations", repeat → no auto-add, but the health report shows the issue with a "Fix" button that applies it on click | ☐ | ☐ |
+| A stale reciprocal's "Fix" button in the health report removes exactly that entry | ☐ | ☐ |
 | Save a note with a bare `[[Term]]` matching an already-established `swallows` claim → qualified silently, no dialog | ☐ | ☐ |
 | Add a *new* `swallows` claim to a note that already has other notes linking to that term → preview/confirm dialog listing every affected file, then applied on confirm | ☐ | ☐ |
 | Decline that new-claim dialog, then save the same claim-owning file again → dialog does not reappear | ☐ | ☐ |
