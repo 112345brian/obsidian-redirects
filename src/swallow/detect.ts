@@ -39,3 +39,9 @@ export function isInsideCodeFence(lines: string[], lineIndex: number): boolean {
 	}
 	return fenced;
 }
+
+/** True for a `metadataCache.unresolvedLinks` key with no alias, fragment,
+ * or path — the only form a swallow claim (a bare literal term) can match. */
+export function isBareTerm(linkText: string): boolean {
+	return !linkText.includes('|') && !linkText.includes('#') && !linkText.includes('/');
+}

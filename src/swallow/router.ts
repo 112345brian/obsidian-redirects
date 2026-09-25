@@ -20,6 +20,7 @@ import { RedirectRegistry, SwallowResolution } from '../registry/registry';
 import { pickFromList } from '../ui/string-picker-modal';
 import { promptAliasConflict } from './alias-conflict-modal';
 import { withAliasRemoved } from './consolidate';
+import { isBareTerm } from './detect';
 import { qualifyBareLinksInContent } from './qualify-content';
 
 export interface SwallowRouterOptions {
@@ -61,10 +62,6 @@ export function createSwallowChangeHandler(app: App, options: SwallowRouterOptio
 			inFlight.delete(file.path);
 		});
 	};
-}
-
-function isBareTerm(linkText: string): boolean {
-	return !linkText.includes('|') && !linkText.includes('#') && !linkText.includes('/');
 }
 
 async function processFile(

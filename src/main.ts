@@ -11,7 +11,9 @@ import { ObsidianVaultSource } from './obsidian-adapter';
 import { RedirectNavigator } from './navigation/navigator';
 import { showPromotableLinks } from './promotable/router';
 import { RedirectRegistry } from './registry/registry';
-import { createSwallowChangeHandler } from './swallow/router';
+import { syncMissingReciprocals } from './registry/reciprocal-sync';
+import { createNewClaimHandler } from './swallow/new-claim-router';
+import { SwallowRouterOptions, createSwallowChangeHandler } from './swallow/router';
 import { HealthReportModal } from './ui/health-modal';
 import { RedirectsSettingTab } from './ui/settings-tab';
 
@@ -39,7 +41,13 @@ export default class RedirectsPlugin extends Plugin {
 		// two-line change in this file if that judgment call changes.
 
 		const rebuild = debounce(
-			() => this.registry?.rebuild(source),
+			() => {
+				this.registry?.rebuild(source);
+				// A missing redirects_from entry is a deterministic consequence of
+				// redirect_to, not a judgment call, so it's synced automatically
+				// right after every rebuild — see reciprocal-sync.ts.
+				if (this.registry) void syncMissingReciprocals(this.app, this.registry);
+			},
 			REBUILD_DEBOUNCE_MS,
 			true,
 		);
@@ -47,9 +55,17 @@ export default class RedirectsPlugin extends Plugin {
 		// Obsidian's metadata cache is still being populated while the vault
 		// opens; building the registry before then would read incomplete
 		// frontmatter/headings and report spurious broken targets. Deferring
-		// the first build here also keeps it off onload's critical path.
+		// the first build here also keeps it off onload's critical path. The
+		// new-claim tracker's own vault-wide seeding scan has the same
+		// requirement, so it's deferred alongside the registry.
 		this.app.workspace.onLayoutReady(() => {
 			this.registry = new RedirectRegistry(source);
+			this.registerEvent(
+				this.app.metadataCache.on(
+					'changed',
+					createNewClaimHandler(this.app, this.swallowRouterOptions()),
+				),
+			);
 		});
 
 		// Metadata cache events cover create/edit/delete of frontmatter-bearing
@@ -69,19 +85,7 @@ export default class RedirectsPlugin extends Plugin {
 		this.registerEvent(
 			this.app.metadataCache.on(
 				'changed',
-				createSwallowChangeHandler(this.app, {
-					getRegistry: () => this.registry,
-					getIgnoredFolders: () => this.data.ignoredFolders,
-					getDismissedPrompts: () => this.data.dismissedSwallowPrompts,
-					saveDismissedPrompt: async (key) => {
-						if (this.data.dismissedSwallowPrompts.includes(key)) return;
-						this.data = {
-							...this.data,
-							dismissedSwallowPrompts: [...this.data.dismissedSwallowPrompts, key],
-						};
-						await this.saveData(this.data);
-					},
-				}),
+				createSwallowChangeHandler(this.app, this.swallowRouterOptions()),
 			),
 		);
 
@@ -183,6 +187,25 @@ export default class RedirectsPlugin extends Plugin {
 				},
 			}),
 		);
+	}
+
+	/** Shared options for both swallow-claim handlers (fix-on-save and
+	 * new-claim), which read the same plugin state and persist to the same
+	 * dismissed-prompts list. */
+	private swallowRouterOptions(): SwallowRouterOptions {
+		return {
+			getRegistry: () => this.registry,
+			getIgnoredFolders: () => this.data.ignoredFolders,
+			getDismissedPrompts: () => this.data.dismissedSwallowPrompts,
+			saveDismissedPrompt: async (key) => {
+				if (this.data.dismissedSwallowPrompts.includes(key)) return;
+				this.data = {
+					...this.data,
+					dismissedSwallowPrompts: [...this.data.dismissedSwallowPrompts, key],
+				};
+				await this.saveData(this.data);
+			},
+		};
 	}
 
 	onunload(): void {}
