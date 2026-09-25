@@ -75,13 +75,15 @@ diagnostic instead.
   link it to that note, register it as an intentionally local section, or
   dismiss it.
 - **Swallow-claim enforcement** — a bare `[[Term]]` link is checked the
-  instant it's closed; an unambiguous `swallows` claim rewrites it in place to
-  a path-qualified `[[canonical|Term]]` (one undo step reverts it), a
-  duplicate claim opens a chooser, and a term that collides with a real
-  note's exact name is never overridden. If the term is already an alias on
-  some other, unrelated note, a dialog asks whether to consolidate (remove
-  that alias) before proceeding, proceed without touching it, or cancel —
-  the claim never silently competes with an existing alias.
+  moment the author moves past its closing brackets (including just pressing
+  the arrow key past Obsidian's auto-inserted `]]`, not only a fresh
+  keystroke); an unambiguous `swallows` claim rewrites it in place to a
+  path-qualified `[[canonical|Term]]` (one undo step reverts it), a duplicate
+  claim opens a chooser, and a term that collides with a real note's exact
+  name is never overridden. If the term is already an alias on some other,
+  unrelated note, a dialog asks whether to consolidate (remove that alias)
+  before proceeding, proceed without touching it, or cancel — the claim
+  never silently competes with an existing alias.
 - **Health report** ("Show redirect health report") — broken targets,
   redirect cycles/chains, missing or stale reciprocal declarations, and
   invalid/duplicate/stale `swallows` claims (including a claim that
