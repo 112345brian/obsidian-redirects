@@ -16,10 +16,11 @@ import {
 import { WikilinkTarget, formatWikilink } from '../contract/wikilink';
 import { RedirectRegistry } from '../registry/registry';
 import { HealthIssue } from '../registry/health';
+import { applyReciprocalFix, reciprocalFixPreview } from '../registry/reciprocal-sync';
 import { confirmMutation } from '../ui/confirm-modal';
 import { pickFromList } from '../ui/string-picker-modal';
 import { promptText } from '../ui/text-input-modal';
-import { stubFrontmatterText, withWikilinkAdded, withWikilinkRemoved } from './mutations';
+import { stubFrontmatterText, withWikilinkAdded } from './mutations';
 import { pickTarget } from './pick-target';
 
 export function toFilePath(name: string): string {
@@ -157,43 +158,12 @@ export async function repairReciprocals(app: App, registry: RedirectRegistry | u
 	);
 	if (!issue) return;
 
-	const canonicalFile = app.vault.getAbstractFileByPath(issue.path);
-	if (!(canonicalFile instanceof TFile)) return;
-	const relatedStubPath = issue.related?.[0];
-	if (!relatedStubPath) return;
+	const title = issue.type === 'missing-reciprocal' ? 'Add missing reciprocal declaration' : 'Remove stale reciprocal declaration';
+	const confirmed = await confirmMutation(app, title, reciprocalFixPreview(issue));
+	if (!confirmed) return;
 
-	if (issue.type === 'missing-reciprocal') {
-		// For a missing reciprocal, `related[0]` is the stub's real file path
-		// (see `missingReciprocalIssue`), so it's always a proper `.md` path.
-		const stubTarget = {
-			path: relatedStubPath.replace(/\.md$/i, ''),
-			raw: formatWikilink({ path: relatedStubPath.replace(/\.md$/i, '') }),
-		};
-		const preview = [
-			`Add to "${issue.path}":`,
-			`  ${REDIRECTS_FROM_KEY}: [..., "${formatWikilink(stubTarget)}"]`,
-		];
-		const confirmed = await confirmMutation(app, 'Add missing reciprocal declaration', preview);
-		if (!confirmed) return;
-		await app.fileManager.processFrontMatter(canonicalFile, (fm: Record<string, unknown>) => {
-			fm[REDIRECTS_FROM_KEY] = withWikilinkAdded(fm[REDIRECTS_FROM_KEY], stubTarget);
-		});
-	} else {
-		// For a stale reciprocal, `related[0]` is the claim's exact raw
-		// wikilink text (see `staleReciprocalIssue`) — removing anything else
-		// risks leaving the actually-written entry untouched.
-		const preview = [
-			`Remove from "${issue.path}":`,
-			`  ${REDIRECTS_FROM_KEY}: "${relatedStubPath}"`,
-		];
-		const confirmed = await confirmMutation(app, 'Remove stale reciprocal declaration', preview);
-		if (!confirmed) return;
-		await app.fileManager.processFrontMatter(canonicalFile, (fm: Record<string, unknown>) => {
-			fm[REDIRECTS_FROM_KEY] = withWikilinkRemoved(fm[REDIRECTS_FROM_KEY], relatedStubPath);
-		});
-	}
-
-	new Notice(`Repaired reciprocal declaration on "${issue.path}".`);
+	const applied = await applyReciprocalFix(app, issue);
+	if (applied) new Notice(`Repaired reciprocal declaration on "${issue.path}".`);
 }
 
 export async function insertQualifiedLink(app: App, editor: Editor): Promise<void> {

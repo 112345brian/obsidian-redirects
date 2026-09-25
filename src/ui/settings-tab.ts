@@ -33,6 +33,17 @@ export class RedirectsSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
+			.setName('Auto-sync missing reciprocal declarations')
+			.setDesc(
+				'Add a missing redirects_from entry automatically after every save. Turn this off to leave it for the health report\'s "Fix" action or the "Repair a reciprocal redirect declaration" command instead.',
+			)
+			.addToggle((toggle) =>
+				toggle.setValue(this.host.getData().autoSyncReciprocals).onChange((value) => {
+					void this.host.saveData({ ...this.host.getData(), autoSyncReciprocals: value });
+				}),
+			);
+
+		new Setting(containerEl)
 			.setName('Ignored folders')
 			.setDesc(
 				'One vault-relative folder per line, excluded from the promotable-links and swallow-claim scans.',
