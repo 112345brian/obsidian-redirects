@@ -1,144 +1,143 @@
 /**
- * Wires the authoring-time swallow rewrite (issue #10) into the real
- * Obsidian app.
+ * Wires the swallow-claim fix (issue #10) into the real Obsidian app as a
+ * linter-style "fix on save": whenever a note's metadata is reparsed
+ * (`metadataCache`'s `changed` event, which fires after every save), its
+ * unresolved links are checked against swallow claims — the same
+ * `unresolvedLinks` cache issue #6 already reads, so no extra scanning.
  *
- * This has to be a CodeMirror 6 extension, not Obsidian's `editor-change`
- * event: Obsidian's default "auto-pair brackets" setting means typing `[[`
- * immediately inserts the matching `]]`, so finishing a link by pressing the
- * right arrow (or clicking away) is a pure cursor move with no document
- * change — `editor-change` never fires for it. `EditorView.updateListener`
- * fires on selection changes too, so it catches that case.
- *
- * An unambiguous swallow claim rewrites the bare link in place via a single
- * CM6 transaction (so one undo reverts it); an ambiguous claim shows an
- * explicit chooser instead of guessing; a claim colliding with a real note's
- * exact name is never applied. Every dispatch is deferred a tick past the
- * triggering update, since CM6 disallows re-dispatching synchronously from
- * inside an update listener.
+ * Declaring a `swallows` claim is itself the explicit authorization; an
+ * unambiguous, non-conflicting match has no judgment call left to make, so
+ * it's qualified immediately with a one-line summary Notice — the same
+ * contract a linter's autofix uses. A genuine judgment call is never
+ * resolved automatically: a duplicate claim still shows an explicit
+ * chooser, and a claim that conflicts with an existing alias still shows
+ * the consolidate/proceed/cancel dialog. A claim colliding with a real
+ * note's exact filename is never applied at all.
  */
 
-import { Extension } from '@codemirror/state';
-import { EditorView } from '@codemirror/view';
-import { App, MarkdownView, Notice, TFile } from 'obsidian';
-import { RedirectRegistry } from '../registry/registry';
+import { App, Notice, TFile } from 'obsidian';
+import { RedirectRegistry, SwallowResolution } from '../registry/registry';
 import { pickFromList } from '../ui/string-picker-modal';
 import { promptAliasConflict } from './alias-conflict-modal';
 import { withAliasRemoved } from './consolidate';
-import { planSwallowRewrite, SwallowRewritePlan } from './plan';
+import { qualifyBareLinksInContent } from './qualify-content';
 
 export interface SwallowRouterOptions {
 	getRegistry: () => RedirectRegistry | undefined;
 	getIgnoredFolders: () => string[];
 }
 
-export function createSwallowUpdateListener(app: App, options: SwallowRouterOptions): Extension {
-	return EditorView.updateListener.of((update) => {
-		if (!update.docChanged && !update.selectionSet) return;
-
-		const view = app.workspace.getActiveViewOfType(MarkdownView);
-		const path = view?.file?.path;
-		if (path && isIgnored(path, options.getIgnoredFolders())) return;
-
-		const pos = update.state.selection.main.head;
-		const lineInfo = update.state.doc.lineAt(pos);
-		const cursorCh = pos - lineInfo.from;
-		const allLines = update.state.doc.toString().split('\n');
-		const lineIndex = lineInfo.number - 1;
-
-		const plan = planSwallowRewrite(lineInfo.text, cursorCh, allLines, lineIndex);
-		if (!plan) return;
+export function createSwallowChangeHandler(app: App, options: SwallowRouterOptions) {
+	return (file: TFile): void => {
+		if (file.extension !== 'md') return;
+		if (isIgnored(file.path, options.getIgnoredFolders())) return;
 
 		const registry = options.getRegistry();
 		if (!registry) return;
 
-		const resolution = registry.getSwallowResolution(plan.term);
-		if (resolution.status === 'none' || resolution.status === 'collides-with-note') return;
+		const linkTexts = app.metadataCache.unresolvedLinks[file.path];
+		if (!linkTexts) return;
 
-		const editorView = update.view;
-		const lineFrom = lineInfo.from;
+		const bareTerms = Object.keys(linkTexts).filter(isBareTerm);
+		if (bareTerms.length === 0) return;
 
-		if (resolution.status === 'unambiguous' && resolution.canonicalPath) {
-			const canonicalPath = resolution.canonicalPath;
-			const aliasConflictPaths = resolution.aliasConflictPaths ?? [];
-			queueMicrotask(() => {
-				void resolveThenRewrite(app, editorView, lineFrom, plan, canonicalPath, aliasConflictPaths);
-			});
-			return;
-		}
-
-		if (resolution.status === 'ambiguous' && resolution.candidatePaths) {
-			const candidatePaths = resolution.candidatePaths;
-			queueMicrotask(() => {
-				void pickFromList(
-					app,
-					`"${plan.term}" is claimed by multiple notes — choose one`,
-					candidatePaths,
-					(p) => p,
-				).then((chosen) => {
-					if (!chosen) return;
-					if (!stillBareMatch(editorView, lineFrom, plan)) return;
-					const aliasConflictPaths = registry.getAliasConflictPaths(plan.term, chosen);
-					void resolveThenRewrite(app, editorView, lineFrom, plan, chosen, aliasConflictPaths);
-				});
-			});
-		}
-	});
+		void processFile(app, registry, file, bareTerms);
+	};
 }
 
-/** True when the exact bare link this plan matched is still there, unchanged
- * — the author (or a dialog's consolidate step) may have edited the line
- * while an async chooser/dialog was open. */
-function stillBareMatch(view: EditorView, lineFrom: number, plan: SwallowRewritePlan): boolean {
-	const doc = view.state.doc;
-	const from = lineFrom + plan.from;
-	const to = lineFrom + plan.to;
-	if (to > doc.length) return false;
-	return doc.sliceString(from, to) === `[[${plan.term}]]`;
+function isBareTerm(linkText: string): boolean {
+	return !linkText.includes('|') && !linkText.includes('#') && !linkText.includes('/');
 }
 
-async function resolveThenRewrite(
+async function processFile(
 	app: App,
-	view: EditorView,
-	lineFrom: number,
-	plan: SwallowRewritePlan,
-	canonicalPath: string,
-	aliasConflictPaths: string[],
+	registry: RedirectRegistry,
+	file: TFile,
+	terms: string[],
 ): Promise<void> {
-	if (aliasConflictPaths.length > 0) {
-		const choice = await promptAliasConflict(app, plan.term, canonicalPath, aliasConflictPaths);
-		if (choice === 'cancel') return;
-		if (choice === 'consolidate') {
-			await consolidateAliases(app, aliasConflictPaths, plan.term);
+	const autoFixable: { term: string; canonicalPath: string }[] = [];
+	const ambiguous: { term: string; resolution: SwallowResolution }[] = [];
+	const aliasConflicts: { term: string; canonicalPath: string; aliasConflictPaths: string[] }[] = [];
+
+	for (const term of terms) {
+		const resolution = registry.getSwallowResolution(term);
+		if (resolution.status === 'unambiguous' && resolution.canonicalPath) {
+			if (resolution.aliasConflictPaths && resolution.aliasConflictPaths.length > 0) {
+				aliasConflicts.push({
+					term,
+					canonicalPath: resolution.canonicalPath,
+					aliasConflictPaths: resolution.aliasConflictPaths,
+				});
+			} else {
+				autoFixable.push({ term, canonicalPath: resolution.canonicalPath });
+			}
+		} else if (resolution.status === 'ambiguous') {
+			ambiguous.push({ term, resolution });
+		}
+		// 'none' and 'collides-with-note' are left untouched.
+	}
+
+	if (autoFixable.length > 0) {
+		const content = await app.vault.read(file);
+		let updated = content;
+		let totalCount = 0;
+		for (const { term, canonicalPath } of autoFixable) {
+			const result = qualifyBareLinksInContent(updated, term, canonicalPath.replace(/\.md$/i, ''));
+			updated = result.content;
+			totalCount += result.count;
+		}
+		if (totalCount > 0) {
+			await app.vault.modify(file, updated);
+			new Notice(
+				`Redirects: qualified ${totalCount} link${totalCount === 1 ? '' : 's'} in "${file.basename}" to match swallow claims.`,
+			);
 		}
 	}
 
-	if (!stillBareMatch(view, lineFrom, plan)) return;
-	applyRewrite(view, lineFrom, plan, canonicalPath);
+	for (const { term, resolution } of ambiguous) {
+		if (!resolution.candidatePaths) continue;
+		const chosen = await pickFromList(
+			app,
+			`"${term}" is claimed by multiple notes — choose one`,
+			resolution.candidatePaths,
+			(p) => p,
+		);
+		if (!chosen) continue;
+		await qualifyOneTerm(app, file, term, chosen);
+	}
+
+	for (const { term, canonicalPath, aliasConflictPaths } of aliasConflicts) {
+		const choice = await promptAliasConflict(app, term, canonicalPath, aliasConflictPaths);
+		if (choice === 'cancel') continue;
+		if (choice === 'consolidate') {
+			await consolidateAliases(app, aliasConflictPaths, term);
+		}
+		await qualifyOneTerm(app, file, term, canonicalPath);
+	}
+}
+
+async function qualifyOneTerm(app: App, file: TFile, term: string, canonicalPath: string): Promise<void> {
+	const content = await app.vault.read(file);
+	const { content: updated, count } = qualifyBareLinksInContent(
+		content,
+		term,
+		canonicalPath.replace(/\.md$/i, ''),
+	);
+	if (count > 0) {
+		await app.vault.modify(file, updated);
+		new Notice(`"${term}" qualified to "${canonicalPath}" in "${file.basename}" (swallow claim).`);
+	}
 }
 
 async function consolidateAliases(app: App, holderPaths: string[], term: string): Promise<void> {
 	for (const holderPath of holderPaths) {
-		const file = app.vault.getAbstractFileByPath(holderPath);
-		if (!(file instanceof TFile)) continue;
-		await app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
+		const holder = app.vault.getAbstractFileByPath(holderPath);
+		if (!(holder instanceof TFile)) continue;
+		await app.fileManager.processFrontMatter(holder, (fm: Record<string, unknown>) => {
 			fm.aliases = withAliasRemoved(fm.aliases, term);
 		});
 	}
 	new Notice(`Removed "${term}" as an alias from: ${holderPaths.join(', ')}.`);
-}
-
-function applyRewrite(
-	view: EditorView,
-	lineFrom: number,
-	plan: SwallowRewritePlan,
-	canonicalPath: string,
-): void {
-	const canonicalNoExt = canonicalPath.replace(/\.md$/i, '');
-	const replacement = `[[${canonicalNoExt}|${plan.term}]]`;
-	view.dispatch({
-		changes: { from: lineFrom + plan.from, to: lineFrom + plan.to, insert: replacement },
-	});
-	new Notice(`"${plan.term}" qualified to "${canonicalPath}" (swallow claim).`);
 }
 
 function isIgnored(path: string, ignoredFolders: string[]): boolean {

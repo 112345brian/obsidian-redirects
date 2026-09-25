@@ -1,9 +1,9 @@
 /**
- * Pure text-level detection for the authoring-time swallow rewrite (issue
- * #10): finds a just-completed *bare* `[[Term]]` wikilink on a line — no
- * alias, no heading/block fragment, no path separator — since only that
- * unqualified form is a candidate for path-qualification. Explicit
- * path-qualified links, aliased links, and fragment links are left alone.
+ * Pure text-level detection for the swallow-claim fix-on-save (issue #10):
+ * finds every *bare* `[[Term]]` wikilink on a line — no alias, no
+ * heading/block fragment, no path separator — since only that unqualified
+ * form is a candidate for path-qualification. Explicit path-qualified links,
+ * aliased links, and fragment links are left alone.
  */
 
 export interface BareWikilinkMatch {

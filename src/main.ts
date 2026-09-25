@@ -11,7 +11,7 @@ import { ObsidianVaultSource } from './obsidian-adapter';
 import { RedirectNavigator } from './navigation/navigator';
 import { showPromotableLinks } from './promotable/router';
 import { RedirectRegistry } from './registry/registry';
-import { createSwallowUpdateListener } from './swallow/router';
+import { createSwallowChangeHandler } from './swallow/router';
 import { HealthReportModal } from './ui/health-modal';
 import { RedirectsSettingTab } from './ui/settings-tab';
 
@@ -66,11 +66,14 @@ export default class RedirectsPlugin extends Plugin {
 			}),
 		);
 
-		this.registerEditorExtension(
-			createSwallowUpdateListener(this.app, {
-				getRegistry: () => this.registry,
-				getIgnoredFolders: () => this.data.ignoredFolders,
-			}),
+		this.registerEvent(
+			this.app.metadataCache.on(
+				'changed',
+				createSwallowChangeHandler(this.app, {
+					getRegistry: () => this.registry,
+					getIgnoredFolders: () => this.data.ignoredFolders,
+				}),
+			),
 		);
 
 		this.registerEvent(
