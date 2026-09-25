@@ -25,12 +25,27 @@ import { qualifyBareLinksInContent } from './qualify-content';
 export interface SwallowRouterOptions {
 	getRegistry: () => RedirectRegistry | undefined;
 	getIgnoredFolders: () => string[];
+	/** Keys (`${filePath}::${term}`) of prompts the user has already
+	 * cancelled — skipped so a decline doesn't reappear on every save. */
+	getDismissedPrompts: () => string[];
+	saveDismissedPrompt: (key: string) => Promise<void>;
+}
+
+function dismissalKey(filePath: string, term: string): string {
+	return `${filePath}::${term}`;
 }
 
 export function createSwallowChangeHandler(app: App, options: SwallowRouterOptions) {
+	// Guards against the fix-on-save write for one term (below) re-triggering
+	// 'changed' for the same file while a chooser/dialog for a *different*
+	// term in that file is still open, which would otherwise start a second,
+	// concurrent pass and show a duplicate prompt.
+	const inFlight = new Set<string>();
+
 	return (file: TFile): void => {
 		if (file.extension !== 'md') return;
 		if (isIgnored(file.path, options.getIgnoredFolders())) return;
+		if (inFlight.has(file.path)) return;
 
 		const registry = options.getRegistry();
 		if (!registry) return;
@@ -41,7 +56,10 @@ export function createSwallowChangeHandler(app: App, options: SwallowRouterOptio
 		const bareTerms = Object.keys(linkTexts).filter(isBareTerm);
 		if (bareTerms.length === 0) return;
 
-		void processFile(app, registry, file, bareTerms);
+		inFlight.add(file.path);
+		void processFile(app, registry, file, bareTerms, options).finally(() => {
+			inFlight.delete(file.path);
+		});
 	};
 }
 
@@ -54,6 +72,7 @@ async function processFile(
 	registry: RedirectRegistry,
 	file: TFile,
 	terms: string[],
+	options: SwallowRouterOptions,
 ): Promise<void> {
 	const autoFixable: { term: string; canonicalPath: string }[] = [];
 	const ambiguous: { term: string; resolution: SwallowResolution }[] = [];
@@ -94,21 +113,33 @@ async function processFile(
 		}
 	}
 
+	const dismissed = new Set(options.getDismissedPrompts());
+
 	for (const { term, resolution } of ambiguous) {
 		if (!resolution.candidatePaths) continue;
+		if (dismissed.has(dismissalKey(file.path, term))) continue;
+
 		const chosen = await pickFromList(
 			app,
 			`"${term}" is claimed by multiple notes — choose one`,
 			resolution.candidatePaths,
 			(p) => p,
 		);
-		if (!chosen) continue;
+		if (!chosen) {
+			await options.saveDismissedPrompt(dismissalKey(file.path, term));
+			continue;
+		}
 		await qualifyOneTerm(app, file, term, chosen);
 	}
 
 	for (const { term, canonicalPath, aliasConflictPaths } of aliasConflicts) {
+		if (dismissed.has(dismissalKey(file.path, term))) continue;
+
 		const choice = await promptAliasConflict(app, term, canonicalPath, aliasConflictPaths);
-		if (choice === 'cancel') continue;
+		if (choice === 'cancel') {
+			await options.saveDismissedPrompt(dismissalKey(file.path, term));
+			continue;
+		}
 		if (choice === 'consolidate') {
 			await consolidateAliases(app, aliasConflictPaths, term);
 		}

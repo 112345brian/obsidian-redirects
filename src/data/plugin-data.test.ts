@@ -16,12 +16,14 @@ describe('mergePluginData', () => {
 				promotableThreshold: 3,
 				ignoredFolders: ['Templates'],
 				handledHeadingCollisions: ['A.md#vector'],
+				dismissedSwallowPrompts: ['A.md::R package'],
 			}),
 		).toEqual({
 			dismissedPromotableTargets: ['term'],
 			promotableThreshold: 3,
 			ignoredFolders: ['Templates'],
 			handledHeadingCollisions: ['A.md#vector'],
+			dismissedSwallowPrompts: ['A.md::R package'],
 		});
 	});
 

@@ -11,6 +11,11 @@ export interface RedirectsPluginData {
 	 * user has already linked, registered as a local landing section, or
 	 * dismissed — any of the three means "already handled". */
 	handledHeadingCollisions: string[];
+	/** Keys (`${filePath}::${term}`) of swallow-claim prompts (a duplicate
+	 * claim's chooser, or an alias-conflict dialog) the user has dismissed —
+	 * without this, cancelling doesn't stop the same prompt from reappearing
+	 * on every subsequent save of that file. */
+	dismissedSwallowPrompts: string[];
 }
 
 export const DEFAULT_PLUGIN_DATA: RedirectsPluginData = {
@@ -18,6 +23,7 @@ export const DEFAULT_PLUGIN_DATA: RedirectsPluginData = {
 	promotableThreshold: 2,
 	ignoredFolders: [],
 	handledHeadingCollisions: [],
+	dismissedSwallowPrompts: [],
 };
 
 export function mergePluginData(loaded: unknown): RedirectsPluginData {
@@ -36,5 +42,8 @@ export function mergePluginData(loaded: unknown): RedirectsPluginData {
 		handledHeadingCollisions: Array.isArray(data.handledHeadingCollisions)
 			? data.handledHeadingCollisions.filter((v): v is string => typeof v === 'string')
 			: DEFAULT_PLUGIN_DATA.handledHeadingCollisions,
+		dismissedSwallowPrompts: Array.isArray(data.dismissedSwallowPrompts)
+			? data.dismissedSwallowPrompts.filter((v): v is string => typeof v === 'string')
+			: DEFAULT_PLUGIN_DATA.dismissedSwallowPrompts,
 	};
 }

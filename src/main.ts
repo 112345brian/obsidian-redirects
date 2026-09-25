@@ -72,6 +72,15 @@ export default class RedirectsPlugin extends Plugin {
 				createSwallowChangeHandler(this.app, {
 					getRegistry: () => this.registry,
 					getIgnoredFolders: () => this.data.ignoredFolders,
+					getDismissedPrompts: () => this.data.dismissedSwallowPrompts,
+					saveDismissedPrompt: async (key) => {
+						if (this.data.dismissedSwallowPrompts.includes(key)) return;
+						this.data = {
+							...this.data,
+							dismissedSwallowPrompts: [...this.data.dismissedSwallowPrompts, key],
+						};
+						await this.saveData(this.data);
+					},
 				}),
 			),
 		);
