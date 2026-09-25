@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-redirects",
-	"version": "1.1.0",
+	"version": "1.2.0",
 	"description": "Frontmatter-driven redirects and disambiguation for Obsidian.",
 	"main": "main.js",
 	"type": "module",
