@@ -24,7 +24,9 @@ redirects_from:
 ```
 
 When a title legitimately has multiple targets, a note can instead be a
-disambiguation page:
+disambiguation page — an ordinary note whose `disambiguates` list is tracked
+and health-checked (a broken or ambiguous candidate is flagged), but which
+otherwise opens and navigates like any other note:
 
 ```yaml
 ---
@@ -49,9 +51,9 @@ swallows:
 
 The plugin will never move, delete, or silently rewrite notes to follow a
 redirect, and it never picks a destination on your behalf — every ambiguous
-case (a disambiguation choice, a duplicate `swallows` claim, a promotable
-unresolved link, a heading/note collision) surfaces an explicit chooser or a
-health-report diagnostic instead.
+case (a duplicate `swallows` claim, a promotable unresolved link, a
+heading/note collision) surfaces an explicit chooser or a health-report
+diagnostic instead.
 
 ## What it does
 
@@ -60,9 +62,6 @@ health-report diagnostic instead.
   and leaves you on the stub instead of guessing. The stub itself stays
   reachable via the file menu's "Open without following redirect" and the
   "Open original redirect stub" command.
-- **Disambiguation chooser** — opening a `disambiguates` note shows a
-  fuzzy-searchable chooser over its candidates; dismissing it just leaves you
-  on the disambiguation page.
 - **Authoring commands** — "Create redirect stub", "Add disambiguation
   candidate", "Insert path-qualified link…", and "Repair a reciprocal redirect
   declaration" all pick targets by full vault-relative path and preview every
@@ -87,6 +86,13 @@ health-report diagnostic instead.
   redirect cycles/chains, missing or stale reciprocal declarations, and
   invalid/duplicate/stale `swallows` claims (including a claim that
   conflicts with an existing alias elsewhere), all in one read-only view.
+
+*A `disambiguates` note doesn't need an active chooser to be an explicit
+choice — it already is one, the same way any hand-written landing page with
+a few links is. An interactive chooser (fuzzy search over its candidates on
+open) is fully implemented in `src/navigation/` but intentionally not wired
+into the plugin; re-enabling it is a two-line change in `src/main.ts` if
+that judgment call changes.*
 
 ## Settings
 
@@ -124,7 +130,6 @@ check by hand, on both desktop and mobile:
 | Open a `redirect_to` stub → lands on the exact heading/block | ☐ | ☐ |
 | Open a stub that cycles → warning, stays on the stub | ☐ | ☐ |
 | "Open without following redirect" from the file menu | ☐ | ☐ |
-| Open a `disambiguates` note → chooser appears; Escape leaves it open | ☐ | ☐ |
 | "Create redirect stub" end-to-end, then verify the reciprocal | ☐ | ☐ |
 | Type a bare `[[Term]]` matching one `swallows` claim → auto-qualified | ☐ | ☐ |
 | Type a bare `[[Term]]` matching two `swallows` claims → chooser | ☐ | ☐ |

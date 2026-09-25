@@ -8,7 +8,6 @@ import {
 import { showHeadingCollisions } from './collision/router';
 import { DEFAULT_PLUGIN_DATA, RedirectsPluginData, mergePluginData } from './data/plugin-data';
 import { ObsidianVaultSource } from './obsidian-adapter';
-import { DisambiguationRouter } from './navigation/disambiguation-router';
 import { RedirectNavigator } from './navigation/navigator';
 import { showPromotableLinks } from './promotable/router';
 import { RedirectRegistry } from './registry/registry';
@@ -21,7 +20,6 @@ const REBUILD_DEBOUNCE_MS = 500;
 export default class RedirectsPlugin extends Plugin {
 	registry?: RedirectRegistry;
 	navigator?: RedirectNavigator;
-	disambiguationRouter?: DisambiguationRouter;
 	data: RedirectsPluginData = DEFAULT_PLUGIN_DATA;
 
 	async onload(): Promise<void> {
@@ -29,7 +27,16 @@ export default class RedirectsPlugin extends Plugin {
 
 		const source = new ObsidianVaultSource(this.app);
 		this.navigator = new RedirectNavigator(this.app, () => this.registry);
-		this.disambiguationRouter = new DisambiguationRouter(this.app, () => this.registry);
+		// The disambiguation chooser (issue #4) is implemented in full —
+		// registry.getDisambiguation, DisambiguationRouter, DisambiguationModal,
+		// and their tests — but deliberately not wired up here. A hand-written
+		// disambiguation note with a few links is already an explicit choice;
+		// intercepting file-open to pop a modal over it didn't earn its added
+		// complexity. `disambiguates` frontmatter is still parsed and
+		// health-checked (broken/ambiguous candidates still get flagged), and
+		// the authoring commands below can still create one — it just opens
+		// and navigates like any other note. Re-enabling the chooser is a
+		// two-line change in this file if that judgment call changes.
 
 		const rebuild = debounce(
 			() => this.registry?.rebuild(source),
@@ -56,7 +63,6 @@ export default class RedirectsPlugin extends Plugin {
 		this.registerEvent(
 			this.app.workspace.on('file-open', (file) => {
 				void this.navigator?.handleFileOpen(file);
-				this.disambiguationRouter?.handleFileOpen(file);
 			}),
 		);
 
@@ -81,17 +87,6 @@ export default class RedirectsPlugin extends Plugin {
 							.setIcon('corner-up-left')
 							.onClick(() => {
 								void this.navigator?.openBypassingRedirect(file.path);
-							});
-					});
-				}
-
-				if (this.registry?.getDisambiguation(file.path)) {
-					menu.addItem((item) => {
-						item
-							.setTitle('Open without showing chooser')
-							.setIcon('corner-up-left')
-							.onClick(() => {
-								void this.disambiguationRouter?.openBypassingChooser(file.path);
 							});
 					});
 				}
