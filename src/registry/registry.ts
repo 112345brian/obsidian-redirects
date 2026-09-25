@@ -25,6 +25,11 @@ export interface SwallowResolution {
 	canonicalPath?: string;
 	/** Every valid claimant path, when status is 'ambiguous'. */
 	candidatePaths?: string[];
+	/** Other notes that already declare this exact term as an alias, when
+	 * status is 'unambiguous' — the claim doesn't collide with a real note's
+	 * filename, but it does compete with an existing, unrelated alias that
+	 * Obsidian's own resolver would otherwise treat as equally valid. */
+	aliasConflictPaths?: string[];
 }
 
 export class RedirectRegistry {
@@ -179,6 +184,23 @@ export class RedirectRegistry {
 			return { status: 'ambiguous', candidatePaths: claims.map((c) => c.claimant.path) };
 		}
 
-		return { status: 'unambiguous', canonicalPath: claims[0]!.claimant.path };
+		const canonicalPath = claims[0]!.claimant.path;
+		const aliasConflictPaths = this.getAliasConflictPaths(trimmed, canonicalPath);
+
+		return {
+			status: 'unambiguous',
+			canonicalPath,
+			...(aliasConflictPaths.length > 0 ? { aliasConflictPaths } : {}),
+		};
+	}
+
+	/** Other notes that already declare `term` as an alias, excluding `path`
+	 * itself. Shared by `getSwallowResolution`'s unambiguous branch and by
+	 * callers checking the specific candidate an ambiguous chooser picked. */
+	getAliasConflictPaths(term: string, path: string): string[] {
+		return this.index
+			.findByAlias(term.trim())
+			.map((file) => file.path)
+			.filter((p) => p !== path);
 	}
 }

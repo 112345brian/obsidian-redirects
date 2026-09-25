@@ -88,3 +88,20 @@ describe('resolveTarget', () => {
 		expect(result.file?.path).toBe('b/Duplicate.md');
 	});
 });
+
+describe('VaultIndex.findByAlias', () => {
+	it('finds a file that declares the name as an alias', () => {
+		const index = new VaultIndex([file({ path: 'Note.md', aliases: ['Nickname'] })]);
+		expect(index.findByAlias('Nickname').map((f) => f.path)).toEqual(['Note.md']);
+	});
+
+	it('does not match a file whose basename equals the name', () => {
+		const index = new VaultIndex([file({ path: 'Nickname.md' })]);
+		expect(index.findByAlias('Nickname')).toEqual([]);
+	});
+
+	it('is case-insensitive', () => {
+		const index = new VaultIndex([file({ path: 'Note.md', aliases: ['Nickname'] })]);
+		expect(index.findByAlias('nickname').map((f) => f.path)).toEqual(['Note.md']);
+	});
+});

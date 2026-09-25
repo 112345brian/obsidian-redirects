@@ -8,9 +8,11 @@
  * a real note's exact name is never applied.
  */
 
-import { App, Editor, MarkdownView, Notice } from 'obsidian';
+import { App, Editor, MarkdownView, Notice, TFile } from 'obsidian';
 import { RedirectRegistry } from '../registry/registry';
 import { pickFromList } from '../ui/string-picker-modal';
+import { promptAliasConflict } from './alias-conflict-modal';
+import { withAliasRemoved } from './consolidate';
 import { planSwallowRewrite } from './plan';
 
 export interface SwallowRouterOptions {
@@ -38,7 +40,14 @@ export function createSwallowEditorChangeHandler(app: App, options: SwallowRoute
 		if (resolution.status === 'none' || resolution.status === 'collides-with-note') return;
 
 		if (resolution.status === 'unambiguous' && resolution.canonicalPath) {
-			applyRewrite(editor, cursor.line, plan, resolution.canonicalPath);
+			void resolveThenRewrite(
+				app,
+				editor,
+				cursor.line,
+				plan,
+				resolution.canonicalPath,
+				resolution.aliasConflictPaths ?? [],
+			);
 			return;
 		}
 
@@ -54,10 +63,47 @@ export function createSwallowEditorChangeHandler(app: App, options: SwallowRoute
 				// the author may have kept typing while the chooser was open.
 				const currentLine = editor.getLine(cursor.line);
 				if (currentLine.slice(plan.from, plan.to) !== `[[${plan.term}]]`) return;
-				applyRewrite(editor, cursor.line, plan, chosen);
+				const aliasConflictPaths = registry.getAliasConflictPaths(plan.term, chosen);
+				void resolveThenRewrite(app, editor, cursor.line, plan, chosen, aliasConflictPaths);
 			});
 		}
 	};
+}
+
+async function resolveThenRewrite(
+	app: App,
+	editor: Editor,
+	line: number,
+	plan: { from: number; to: number; term: string },
+	canonicalPath: string,
+	aliasConflictPaths: string[],
+): Promise<void> {
+	if (aliasConflictPaths.length > 0) {
+		const choice = await promptAliasConflict(app, plan.term, canonicalPath, aliasConflictPaths);
+		if (choice === 'cancel') return;
+		if (choice === 'consolidate') {
+			await consolidateAliases(app, aliasConflictPaths, plan.term);
+		}
+	}
+
+	// Re-check the line still has the same bare link before writing — the
+	// author (or the consolidate step above) may have changed things while
+	// the dialog was open.
+	const currentLine = editor.getLine(line);
+	if (currentLine.slice(plan.from, plan.to) !== `[[${plan.term}]]`) return;
+
+	applyRewrite(editor, line, plan, canonicalPath);
+}
+
+async function consolidateAliases(app: App, holderPaths: string[], term: string): Promise<void> {
+	for (const holderPath of holderPaths) {
+		const file = app.vault.getAbstractFileByPath(holderPath);
+		if (!(file instanceof TFile)) continue;
+		await app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
+			fm.aliases = withAliasRemoved(fm.aliases, term);
+		});
+	}
+	new Notice(`Removed "${term}" as an alias from: ${holderPaths.join(', ')}.`);
 }
 
 function applyRewrite(

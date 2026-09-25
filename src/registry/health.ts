@@ -10,7 +10,8 @@ export type HealthIssueType =
 	| 'promotion-candidate'
 	| 'invalid-swallow-claimant'
 	| 'duplicate-swallow-claim'
-	| 'stale-swallow-claim';
+	| 'stale-swallow-claim'
+	| 'swallow-alias-conflict';
 
 export interface HealthIssue {
 	type: HealthIssueType;
@@ -120,5 +121,18 @@ export function staleSwallowClaimIssue(path: string, term: string, existingNoteP
 		path,
 		message: `"${path}" claims "${term}" in swallows, but "${existingNotePath}" already exists under that exact name; the claim can never take effect.`,
 		related: [existingNotePath],
+	};
+}
+
+export function swallowAliasConflictIssue(
+	path: string,
+	term: string,
+	aliasHolderPaths: string[],
+): HealthIssue {
+	return {
+		type: 'swallow-alias-conflict',
+		path,
+		message: `"${path}" claims "${term}" in swallows, but it's also an alias on: ${aliasHolderPaths.join(', ')}. Consider consolidating.`,
+		related: aliasHolderPaths,
 	};
 }
