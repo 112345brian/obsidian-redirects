@@ -81,6 +81,17 @@ export default class RedirectsPlugin extends Plugin {
 		this.register(() => rebuild.cancel());
 
 		this.registerEvent(
+			this.app.vault.on('rename', (file, oldPath) => {
+				this.navigator?.handleRename(oldPath, file.path);
+			}),
+		);
+		this.registerEvent(
+			this.app.vault.on('delete', (file) => {
+				this.navigator?.handleDelete(file.path);
+			}),
+		);
+
+		this.registerEvent(
 			this.app.workspace.on('file-open', (file) => {
 				void this.navigator?.handleFileOpen(file);
 			}),

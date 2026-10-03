@@ -59,8 +59,9 @@ diagnostic instead.
 
 - **Redirect navigation** — opening a `redirect_to` stub routes to its exact
   target (note, heading, or block); a cycle or broken target shows a warning
-  and leaves you on the stub instead of guessing. The stub itself stays
-  reachable via the file menu's "Open without following redirect" and the
+  and leaves you on the stub instead of guessing. Going back (or forward)
+  onto a stub from the target it redirected to leaves the stub open, so you
+  can edit it. The stub itself also stays reachable via the file menu's "Open without following redirect" and the
   "Open original redirect stub" command.
 - **Reciprocal auto-sync** — a stub's `redirect_to` is the only source of
   truth needed for its canonical note's `redirects_from` entry, so a missing

@@ -8,6 +8,7 @@
 import { App, Notice, TFile } from 'obsidian';
 import { RedirectRegistry } from '../registry/registry';
 import { planNavigation } from './plan';
+import { RedirectReturnTracker } from './return-tracker';
 
 export class RedirectNavigator {
 	/** Path of the last stub this navigator redirected away from, for the
@@ -19,6 +20,8 @@ export class RedirectNavigator {
 	/** Set right before opening a stub deliberately, so that open isn't
 	 * immediately followed again. */
 	private bypassNextOpen = false;
+	/** Lets history back-steps onto a stub leave it open instead of re-redirecting. */
+	private returns = new RedirectReturnTracker();
 
 	constructor(
 		private app: App,
@@ -30,12 +33,23 @@ export class RedirectNavigator {
 		this.bypassNextOpen = true;
 	}
 
+	/** Keeps back-navigation tracking valid across renames and deletes. */
+	handleRename(oldPath: string, newPath: string): void {
+		this.returns.renamed(oldPath, newPath);
+	}
+
+	handleDelete(path: string): void {
+		this.returns.deleted(path);
+	}
+
 	getLastStubPath(): string | undefined {
 		return this.lastStubPath;
 	}
 
 	async handleFileOpen(file: TFile | null): Promise<void> {
 		if (!file) return;
+
+		const isReturn = this.returns.opened(file.path);
 
 		if (this.bypassNextOpen) {
 			this.bypassNextOpen = false;
@@ -46,6 +60,10 @@ export class RedirectNavigator {
 			this.redirectingToPath = undefined;
 			return;
 		}
+
+		// Backed into a stub we had redirected away from: leave it open so it
+		// can be edited. Fresh opens (links, quick switcher) still redirect.
+		if (isReturn) return;
 
 		const registry = this.getRegistry();
 		if (!registry) return;
@@ -73,6 +91,7 @@ export class RedirectNavigator {
 
 				this.lastStubPath = file.path;
 				this.redirectingToPath = target.file.path;
+				this.returns.recordRedirect(file.path, target.file.path);
 
 				const linktext = target.target.blockId
 					? `${target.file.path}#^${target.target.blockId}`
