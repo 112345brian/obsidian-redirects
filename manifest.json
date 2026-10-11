@@ -1,7 +1,7 @@
 {
 	"id": "redirects",
 	"name": "Redirects",
-	"version": "1.4.0",
+	"version": "1.4.1",
 	"minAppVersion": "1.4.4",
 	"description": "Redirect old note names to their canonical notes and set up disambiguation pages, using frontmatter properties you control.",
 	"author": "Brian",
