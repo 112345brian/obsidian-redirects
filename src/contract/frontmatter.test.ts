@@ -15,8 +15,8 @@ describe('parseContract', () => {
 		expect(result.issues).toEqual([]);
 	});
 
-	it('parses a valid redirect-to', () => {
-		const result = parseContract({ 'redirect-to': '[[Canonical note]]' });
+	it('parses a valid redirects-to', () => {
+		const result = parseContract({ 'redirects-to': '[[Canonical note]]' });
 		expect(result.redirectTo).toEqual({
 			path: 'Canonical note',
 			raw: '[[Canonical note]]',
@@ -42,25 +42,25 @@ describe('parseContract', () => {
 		expect(result.issues).toEqual([]);
 	});
 
-	it('flags a non-string redirect-to', () => {
-		const result = parseContract({ 'redirect-to': ['[[Note]]'] });
+	it('flags a non-string redirects-to', () => {
+		const result = parseContract({ 'redirects-to': ['[[Note]]'] });
 		expect(result.redirectTo).toBeUndefined();
 		expect(result.issues).toEqual([
-			expect.objectContaining({ property: 'redirect-to', code: 'not-a-string' }),
+			expect.objectContaining({ property: 'redirects-to', code: 'not-a-string' }),
 		]);
 	});
 
-	it('flags an empty redirect-to', () => {
-		const result = parseContract({ 'redirect-to': '   ' });
+	it('flags an empty redirects-to', () => {
+		const result = parseContract({ 'redirects-to': '   ' });
 		expect(result.issues).toEqual([
-			expect.objectContaining({ property: 'redirect-to', code: 'empty-value' }),
+			expect.objectContaining({ property: 'redirects-to', code: 'empty-value' }),
 		]);
 	});
 
-	it('flags a malformed redirect-to', () => {
-		const result = parseContract({ 'redirect-to': 'Note without brackets' });
+	it('flags a malformed redirects-to', () => {
+		const result = parseContract({ 'redirects-to': 'Note without brackets' });
 		expect(result.issues).toEqual([
-			expect.objectContaining({ property: 'redirect-to', code: 'malformed-wikilink' }),
+			expect.objectContaining({ property: 'redirects-to', code: 'malformed-wikilink' }),
 		]);
 	});
 
@@ -110,7 +110,7 @@ describe('configurable property keys', () => {
 	const legacy = { redirectTo: 'redirect_to', redirectsFrom: 'redirects_from' };
 
 	it('defaults to hyphenated names and ignores the underscore forms', () => {
-		const fm = { 'redirect-to': '[[A]]', 'redirects-from': ['[[B]]'] };
+		const fm = { 'redirects-to': '[[A]]', 'redirects-from': ['[[B]]'] };
 		const parsed = parseContract(fm);
 		expect(parsed.redirectTo?.path).toBe('A');
 		expect(parsed.redirectsFrom).toHaveLength(1);

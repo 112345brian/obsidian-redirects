@@ -8,7 +8,7 @@
  * button treats the click itself as the confirmation, the issue's own
  * message having already been the preview).
  *
- * A missing reciprocal is a deterministic consequence of `redirect_to`, not
+ * A missing reciprocal is a deterministic consequence of `redirects-to`, not
  * a judgment call, so the automatic sync adds it with no confirmation at
  * all (see `syncMissingReciprocals`). A *stale* reciprocal is never
  * auto-applied: removing text based on a guess at intent risks discarding a
@@ -61,7 +61,7 @@ export async function applyReciprocalFix(app: App, issue: HealthIssue): Promise<
 }
 
 /** Auto-syncs every missing reciprocal after a rebuild — no confirmation,
- * since redirect_to already made the reciprocal a foregone conclusion. */
+ * since redirects-to already made the reciprocal a foregone conclusion. */
 export async function syncMissingReciprocals(app: App, registry: RedirectRegistry): Promise<void> {
 	const issues = registry.getHealthReport().filter((issue) => issue.type === 'missing-reciprocal');
 	if (issues.length === 0) return;

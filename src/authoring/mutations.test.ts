@@ -38,9 +38,9 @@ describe('withWikilinkRemoved', () => {
 });
 
 describe('stubFrontmatterText', () => {
-	it('renders a redirect-to frontmatter block', () => {
-		expect(stubFrontmatterText('redirect-to', { path: 'Canonical', raw: '[[Canonical]]' })).toBe(
-			'---\nredirect-to: "[[Canonical]]"\n---\n',
+	it('renders a redirects-to frontmatter block', () => {
+		expect(stubFrontmatterText('redirects-to', { path: 'Canonical', raw: '[[Canonical]]' })).toBe(
+			'---\nredirects-to: "[[Canonical]]"\n---\n',
 		);
 	});
 });

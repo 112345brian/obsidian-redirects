@@ -6,7 +6,7 @@ describe('RedirectRegistry', () => {
 	it('resolves a stub to its canonical note', () => {
 		const registry = new RedirectRegistry(
 			vaultOf([
-				file({ path: 'Old name.md', frontmatter: { 'redirect-to': '[[Canonical]]' } }),
+				file({ path: 'Old name.md', frontmatter: { 'redirects-to': '[[Canonical]]' } }),
 				file({
 					path: 'Canonical.md',
 					frontmatter: { 'redirects-from': ['[[Old name]]'] },
@@ -20,10 +20,10 @@ describe('RedirectRegistry', () => {
 		expect(registry.getHealthReport()).toEqual([]);
 	});
 
-	it('reports a broken target when redirect-to does not resolve', () => {
+	it('reports a broken target when redirects-to does not resolve', () => {
 		const registry = new RedirectRegistry(
 			vaultOf([
-				file({ path: 'Stub.md', frontmatter: { 'redirect-to': '[[Nowhere]]' } }),
+				file({ path: 'Stub.md', frontmatter: { 'redirects-to': '[[Nowhere]]' } }),
 			]),
 		);
 		const issues = registry.getHealthReport();
@@ -35,7 +35,7 @@ describe('RedirectRegistry', () => {
 	it('reports a missing reciprocal declaration', () => {
 		const registry = new RedirectRegistry(
 			vaultOf([
-				file({ path: 'Stub.md', frontmatter: { 'redirect-to': '[[Canonical]]' } }),
+				file({ path: 'Stub.md', frontmatter: { 'redirects-to': '[[Canonical]]' } }),
 				file({ path: 'Canonical.md' }),
 			]),
 		);
@@ -63,7 +63,7 @@ describe('RedirectRegistry', () => {
 	it('reports a stale reciprocal when the stub points elsewhere', () => {
 		const registry = new RedirectRegistry(
 			vaultOf([
-				file({ path: 'Stub.md', frontmatter: { 'redirect-to': '[[Other]]' } }),
+				file({ path: 'Stub.md', frontmatter: { 'redirects-to': '[[Other]]' } }),
 				file({ path: 'Other.md' }),
 				file({
 					path: 'Canonical.md',
@@ -90,8 +90,8 @@ describe('RedirectRegistry', () => {
 	it('detects a redirect cycle', () => {
 		const registry = new RedirectRegistry(
 			vaultOf([
-				file({ path: 'A.md', frontmatter: { 'redirect-to': '[[B]]' } }),
-				file({ path: 'B.md', frontmatter: { 'redirect-to': '[[A]]' } }),
+				file({ path: 'A.md', frontmatter: { 'redirects-to': '[[B]]' } }),
+				file({ path: 'B.md', frontmatter: { 'redirects-to': '[[A]]' } }),
 			]),
 		);
 		const issues = registry.getHealthReport();
@@ -104,8 +104,8 @@ describe('RedirectRegistry', () => {
 	it('detects a multi-hop redirect chain and resolves through it', () => {
 		const registry = new RedirectRegistry(
 			vaultOf([
-				file({ path: 'A.md', frontmatter: { 'redirect-to': '[[B]]' } }),
-				file({ path: 'B.md', frontmatter: { 'redirect-to': '[[C]]' } }),
+				file({ path: 'A.md', frontmatter: { 'redirects-to': '[[B]]' } }),
+				file({ path: 'B.md', frontmatter: { 'redirects-to': '[[C]]' } }),
 				file({ path: 'C.md' }),
 			]),
 		);
@@ -118,9 +118,9 @@ describe('RedirectRegistry', () => {
 	it('reports a redirect chain exactly once, not once per hop', () => {
 		const registry = new RedirectRegistry(
 			vaultOf([
-				file({ path: 'A.md', frontmatter: { 'redirect-to': '[[B]]' } }),
-				file({ path: 'B.md', frontmatter: { 'redirect-to': '[[C]]' } }),
-				file({ path: 'C.md', frontmatter: { 'redirect-to': '[[D]]' } }),
+				file({ path: 'A.md', frontmatter: { 'redirects-to': '[[B]]' } }),
+				file({ path: 'B.md', frontmatter: { 'redirects-to': '[[C]]' } }),
+				file({ path: 'C.md', frontmatter: { 'redirects-to': '[[D]]' } }),
 				file({ path: 'D.md' }),
 			]),
 		);
@@ -129,10 +129,10 @@ describe('RedirectRegistry', () => {
 		expect(chains[0]?.related).toEqual(['A.md', 'B.md', 'C.md', 'D.md']);
 	});
 
-	it('matches a reciprocal claim against a stub whose own redirect-to heading is broken', () => {
+	it('matches a reciprocal claim against a stub whose own redirects-to heading is broken', () => {
 		const registry = new RedirectRegistry(
 			vaultOf([
-				file({ path: 'Stub.md', frontmatter: { 'redirect-to': '[[Canonical#Missing]]' } }),
+				file({ path: 'Stub.md', frontmatter: { 'redirects-to': '[[Canonical#Missing]]' } }),
 				file({
 					path: 'Canonical.md',
 					frontmatter: { 'redirects-from': ['[[Stub]]'] },
@@ -150,7 +150,7 @@ describe('RedirectRegistry', () => {
 			vaultOf([
 				file({
 					path: 'Stub.md',
-					frontmatter: { 'redirect-to': '[[Canonical]]' },
+					frontmatter: { 'redirects-to': '[[Canonical]]' },
 					hasBodyContent: true,
 				}),
 				file({
@@ -182,7 +182,7 @@ describe('RedirectRegistry', () => {
 
 	it('re-resolves correctly after a note is renamed and links updated', () => {
 		const before = vaultOf([
-			file({ path: 'Stub.md', frontmatter: { 'redirect-to': '[[Old canonical]]' } }),
+			file({ path: 'Stub.md', frontmatter: { 'redirects-to': '[[Old canonical]]' } }),
 			file({
 				path: 'Old canonical.md',
 				frontmatter: { 'redirects-from': ['[[Stub]]'] },
@@ -194,7 +194,7 @@ describe('RedirectRegistry', () => {
 		// Simulate Obsidian renaming "Old canonical.md" -> "New canonical.md"
 		// and rewriting the wikilinks that pointed at it.
 		const after = vaultOf([
-			file({ path: 'Stub.md', frontmatter: { 'redirect-to': '[[New canonical]]' } }),
+			file({ path: 'Stub.md', frontmatter: { 'redirects-to': '[[New canonical]]' } }),
 			file({
 				path: 'New canonical.md',
 				frontmatter: { 'redirects-from': ['[[Stub]]'] },
@@ -240,7 +240,7 @@ describe('RedirectRegistry', () => {
 			vaultOf([
 				file({
 					path: 'Stub.md',
-					frontmatter: { 'redirect-to': '[[Canonical]]', swallows: ['R package'] },
+					frontmatter: { 'redirects-to': '[[Canonical]]', swallows: ['R package'] },
 				}),
 				file({ path: 'Canonical.md' }),
 			]),
@@ -314,7 +314,7 @@ describe('RedirectRegistry', () => {
 	});
 
 	it('does not mutate any vault file while building or validating', () => {
-		const stub = file({ path: 'Stub.md', frontmatter: { 'redirect-to': '[[Canonical]]' } });
+		const stub = file({ path: 'Stub.md', frontmatter: { 'redirects-to': '[[Canonical]]' } });
 		const canonical = file({ path: 'Canonical.md' });
 		const snapshot = JSON.stringify([stub, canonical]);
 

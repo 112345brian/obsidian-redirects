@@ -9,7 +9,7 @@ Redirect stubs keep their own path and point at a canonical target:
 
 ```yaml
 ---
-redirect-to: "[[Mathematics#Vector]]"
+redirects-to: "[[Mathematics#Vector]]"
 ---
 ```
 
@@ -57,13 +57,13 @@ diagnostic instead.
 
 ## What it does
 
-- **Redirect navigation** — opening a `redirect-to` stub routes to its exact
+- **Redirect navigation** — opening a `redirects-to` stub routes to its exact
   target (note, heading, or block); a cycle or broken target shows a warning
   and leaves you on the stub instead of guessing. Going back (or forward)
   onto a stub from the target it redirected to leaves the stub open, so you
   can edit it. The stub itself also stays reachable via the file menu's "Open without following redirect" and the
   "Open original redirect stub" command.
-- **Reciprocal auto-sync** — a stub's `redirect-to` is the only source of
+- **Reciprocal auto-sync** — a stub's `redirects-to` is the only source of
   truth needed for its canonical note's `redirects-from` entry, so a missing
   one is added automatically after every save, with a summary Notice — no
   command to remember to run. Turn this off with the "Auto-sync missing
@@ -118,12 +118,12 @@ that judgment call changes.*
 ## Settings
 
 - **Redirect target property** — the frontmatter property a stub uses to
-  point at its canonical note (default `redirect-to`).
+  point at its canonical note (default `redirects-to`).
 - **Reciprocal list property** — the property a canonical note uses to list
   its stubs (default `redirects-from`). Both names are changeable; notes
   written with a different name stop being recognized until you rename the
   property in them or switch the setting (e.g. to `redirect_to` /
-  `redirects_from`, the names used through 1.3.0).
+  `redirects_from`, the names used through 1.3.0, or `redirect-to` from 1.4.0).
 - **Auto-sync missing reciprocal declarations** — add a missing
   `redirects-from` entry automatically after every save (default on). Off
   just means applying it yourself, via the health report's "Fix" button or
@@ -160,11 +160,11 @@ check by hand, on both desktop and mobile:
 
 | Scenario | Desktop | Mobile |
 | --- | --- | --- |
-| Open a `redirect-to` stub → lands on the exact heading/block | ☐ | ☐ |
+| Open a `redirects-to` stub → lands on the exact heading/block | ☐ | ☐ |
 | Open a stub that cycles → warning, stays on the stub | ☐ | ☐ |
 | "Open without following redirect" from the file menu | ☐ | ☐ |
 | "Create redirect stub" end-to-end, then verify the reciprocal | ☐ | ☐ |
-| Manually add `redirect-to` to a note (no reciprocal yet), save → the target note gets `redirects-from` automatically | ☐ | ☐ |
+| Manually add `redirects-to` to a note (no reciprocal yet), save → the target note gets `redirects-from` automatically | ☐ | ☐ |
 | Turn off "Auto-sync missing reciprocal declarations", repeat → no auto-add, but the health report shows the issue with a "Fix" button that applies it on click | ☐ | ☐ |
 | A stale reciprocal's "Fix" button in the health report removes exactly that entry | ☐ | ☐ |
 | Save a note with a bare `[[Term]]` matching an already-established `swallows` claim → qualified silently, no dialog | ☐ | ☐ |
@@ -172,7 +172,7 @@ check by hand, on both desktop and mobile:
 | Decline that new-claim dialog, then save the same claim-owning file again → dialog does not reappear | ☐ | ☐ |
 | Save a note with a bare `[[Term]]` matching two `swallows` claims → chooser; cancel it, save again → chooser does not reappear | ☐ | ☐ |
 | Save a note with a bare `[[Term]]` matching a claim that's also an alias elsewhere → consolidate/proceed/cancel dialog | ☐ | ☐ |
-| Rename/move a canonical note → `redirect-to`/`redirects-from` still resolve | ☐ | ☐ |
+| Rename/move a canonical note → `redirects-to`/`redirects-from` still resolve | ☐ | ☐ |
 | "Show redirect health report" reflects a freshly broken target | ☐ | ☐ |
 
 ## Development

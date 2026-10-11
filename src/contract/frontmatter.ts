@@ -3,7 +3,7 @@
  * frontmatter properties this plugin defines. Values must be native
  * wikilinks so Obsidian's own renamer keeps them in sync.
  *
- *   redirect-to:    "[[Canonical note#Heading]]"   (single wikilink)
+ *   redirects-to:    "[[Canonical note#Heading]]"   (single wikilink)
  *   redirects-from:
  *     - "[[Old name]]"                              (list of wikilinks)
  *   disambiguates:
@@ -11,7 +11,7 @@
  *   swallows:
  *     - "R package"                                 (list of literal terms)
  *
- * `redirect-to` is the source of truth for where a stub points.
+ * `redirects-to` is the source of truth for where a stub points.
  * `redirects-from` is a reciprocal declaration used only for indexing and
  * validation — the registry (issue #2) treats a mismatch as a warning, not
  * an error, and never rewrites files. `swallows` (issue #10) is different in
@@ -30,7 +30,7 @@ export interface PropertyKeys {
 }
 
 export const DEFAULT_PROPERTY_KEYS: PropertyKeys = {
-	redirectTo: 'redirect-to',
+	redirectTo: 'redirects-to',
 	redirectsFrom: 'redirects-from',
 };
 export const DISAMBIGUATES_KEY = 'disambiguates';

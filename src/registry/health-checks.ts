@@ -216,7 +216,7 @@ function checkReciprocals(state: RegistryState): HealthIssue[] {
 				continue;
 			}
 
-			// Compare files, not exact status: a stub whose redirect-to has a
+			// Compare files, not exact status: a stub whose redirects-to has a
 			// broken heading/block still identifies the right file, and that
 			// fragment problem is already reported as its own broken-target
 			// issue — it shouldn't also masquerade as a reciprocal mismatch.

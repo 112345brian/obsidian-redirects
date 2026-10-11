@@ -26,7 +26,7 @@ describe('mergePluginData', () => {
 			handledHeadingCollisions: ['A.md#vector'],
 			dismissedSwallowPrompts: ['A.md::R package'],
 			autoSyncReciprocals: false,
-			propertyKeys: { redirectTo: 'redirect-to', redirectsFrom: 'redirects-from' },
+			propertyKeys: { redirectTo: 'redirects-to', redirectsFrom: 'redirects-from' },
 		});
 	});
 
@@ -37,7 +37,7 @@ describe('mergePluginData', () => {
 		).toEqual({ redirectTo: 'redirect_to', redirectsFrom: 'redirects-from' });
 		expect(
 			mergePluginData({ propertyKeys: { redirectTo: 'has space', redirectsFrom: 42 } }).propertyKeys,
-		).toEqual({ redirectTo: 'redirect-to', redirectsFrom: 'redirects-from' });
+		).toEqual({ redirectTo: 'redirects-to', redirectsFrom: 'redirects-from' });
 	});
 
 	it('drops non-string entries from list fields', () => {
