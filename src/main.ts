@@ -5,6 +5,7 @@ import {
 	insertQualifiedLink,
 	repairReciprocals,
 } from './authoring/commands';
+import { setPropertyKeys } from './contract/frontmatter';
 import { showHeadingCollisions } from './collision/router';
 import { DEFAULT_PLUGIN_DATA, RedirectsPluginData, mergePluginData } from './data/plugin-data';
 import { ObsidianVaultSource } from './obsidian-adapter';
@@ -26,6 +27,7 @@ export default class RedirectsPlugin extends Plugin {
 
 	async onload(): Promise<void> {
 		this.data = mergePluginData(await this.loadData());
+		setPropertyKeys(this.data.propertyKeys);
 
 		const source = new ObsidianVaultSource(this.app);
 		this.navigator = new RedirectNavigator(this.app, () => this.registry);
@@ -43,8 +45,8 @@ export default class RedirectsPlugin extends Plugin {
 		const rebuild = debounce(
 			() => {
 				this.registry?.rebuild(source);
-				// A missing redirects_from entry is a deterministic consequence of
-				// redirect_to, not a judgment call, so it's synced automatically
+				// A missing reciprocal entry is a deterministic consequence of
+				// the redirect target, not a judgment call, so it's synced automatically
 				// right after every rebuild — see reciprocal-sync.ts. Opt-out via
 				// the "Auto-sync missing reciprocal declarations" setting still
 				// leaves it visible in the health report with a one-click "Fix".
@@ -201,8 +203,18 @@ export default class RedirectsPlugin extends Plugin {
 			new RedirectsSettingTab(this.app, this, {
 				getData: () => this.data,
 				saveData: async (data) => {
+					const keysChanged =
+						data.propertyKeys.redirectTo !== this.data.propertyKeys.redirectTo ||
+						data.propertyKeys.redirectsFrom !== this.data.propertyKeys.redirectsFrom;
 					this.data = data;
 					await this.saveData(data);
+					if (keysChanged) {
+						// Property names changed: re-read every note's frontmatter
+						// under the new names. Rebuild only; auto-sync waits for the
+						// next real edit so a rename never rewrites files by itself.
+						setPropertyKeys(data.propertyKeys);
+						this.registry?.rebuild(source);
+					}
 				},
 			}),
 		);

@@ -12,8 +12,8 @@ describe('planNavigation', () => {
 	it('navigates a single-hop redirect to its target', () => {
 		const registry = new RedirectRegistry(
 			vaultOf([
-				file({ path: 'Stub.md', frontmatter: { redirect_to: '[[Canonical]]' } }),
-				file({ path: 'Canonical.md', frontmatter: { redirects_from: ['[[Stub]]'] } }),
+				file({ path: 'Stub.md', frontmatter: { 'redirect-to': '[[Canonical]]' } }),
+				file({ path: 'Canonical.md', frontmatter: { 'redirects-from': ['[[Stub]]'] } }),
 			]),
 		);
 		const outcome = planNavigation(registry, 'Stub.md');
@@ -27,8 +27,8 @@ describe('planNavigation', () => {
 	it('follows a multi-hop chain to its final target', () => {
 		const registry = new RedirectRegistry(
 			vaultOf([
-				file({ path: 'A.md', frontmatter: { redirect_to: '[[B]]' } }),
-				file({ path: 'B.md', frontmatter: { redirect_to: '[[C]]' } }),
+				file({ path: 'A.md', frontmatter: { 'redirect-to': '[[B]]' } }),
+				file({ path: 'B.md', frontmatter: { 'redirect-to': '[[C]]' } }),
 				file({ path: 'C.md' }),
 			]),
 		);
@@ -43,8 +43,8 @@ describe('planNavigation', () => {
 	it('detects a cycle instead of navigating anywhere', () => {
 		const registry = new RedirectRegistry(
 			vaultOf([
-				file({ path: 'A.md', frontmatter: { redirect_to: '[[B]]' } }),
-				file({ path: 'B.md', frontmatter: { redirect_to: '[[A]]' } }),
+				file({ path: 'A.md', frontmatter: { 'redirect-to': '[[B]]' } }),
+				file({ path: 'B.md', frontmatter: { 'redirect-to': '[[A]]' } }),
 			]),
 		);
 		const outcome = planNavigation(registry, 'A.md');
@@ -56,7 +56,7 @@ describe('planNavigation', () => {
 
 	it('reports broken when the target does not resolve', () => {
 		const registry = new RedirectRegistry(
-			vaultOf([file({ path: 'Stub.md', frontmatter: { redirect_to: '[[Nowhere]]' } })]),
+			vaultOf([file({ path: 'Stub.md', frontmatter: { 'redirect-to': '[[Nowhere]]' } })]),
 		);
 		const outcome = planNavigation(registry, 'Stub.md');
 		expect(outcome.kind).toBe('broken');
@@ -68,7 +68,7 @@ describe('planNavigation', () => {
 	it('reports broken when a mid-chain hop is ambiguous', () => {
 		const registry = new RedirectRegistry(
 			vaultOf([
-				file({ path: 'A.md', frontmatter: { redirect_to: '[[Term]]' } }),
+				file({ path: 'A.md', frontmatter: { 'redirect-to': '[[Term]]' } }),
 				file({ path: 'x/Term.md' }),
 				file({ path: 'y/Term.md' }),
 			]),

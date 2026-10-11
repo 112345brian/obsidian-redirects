@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { parseContract } from './frontmatter';
+import {
+	DEFAULT_PROPERTY_KEYS,
+	parseContract,
+	setPropertyKeys,
+	validatePropertyKey,
+} from './frontmatter';
 
 describe('parseContract', () => {
 	it('returns empty result for missing frontmatter', () => {
@@ -10,8 +15,8 @@ describe('parseContract', () => {
 		expect(result.issues).toEqual([]);
 	});
 
-	it('parses a valid redirect_to', () => {
-		const result = parseContract({ redirect_to: '[[Canonical note]]' });
+	it('parses a valid redirect-to', () => {
+		const result = parseContract({ 'redirect-to': '[[Canonical note]]' });
 		expect(result.redirectTo).toEqual({
 			path: 'Canonical note',
 			raw: '[[Canonical note]]',
@@ -19,9 +24,9 @@ describe('parseContract', () => {
 		expect(result.issues).toEqual([]);
 	});
 
-	it('parses redirects_from as a list of wikilinks', () => {
+	it('parses redirects-from as a list of wikilinks', () => {
 		const result = parseContract({
-			redirects_from: ['[[Old name]]', '[[Older name#Heading]]'],
+			'redirects-from': ['[[Old name]]', '[[Older name#Heading]]'],
 		});
 		expect(result.redirectsFrom).toHaveLength(2);
 		expect(result.redirectsFrom[0]!.path).toBe('Old name');
@@ -37,39 +42,39 @@ describe('parseContract', () => {
 		expect(result.issues).toEqual([]);
 	});
 
-	it('flags a non-string redirect_to', () => {
-		const result = parseContract({ redirect_to: ['[[Note]]'] });
+	it('flags a non-string redirect-to', () => {
+		const result = parseContract({ 'redirect-to': ['[[Note]]'] });
 		expect(result.redirectTo).toBeUndefined();
 		expect(result.issues).toEqual([
-			expect.objectContaining({ property: 'redirect_to', code: 'not-a-string' }),
+			expect.objectContaining({ property: 'redirect-to', code: 'not-a-string' }),
 		]);
 	});
 
-	it('flags an empty redirect_to', () => {
-		const result = parseContract({ redirect_to: '   ' });
+	it('flags an empty redirect-to', () => {
+		const result = parseContract({ 'redirect-to': '   ' });
 		expect(result.issues).toEqual([
-			expect.objectContaining({ property: 'redirect_to', code: 'empty-value' }),
+			expect.objectContaining({ property: 'redirect-to', code: 'empty-value' }),
 		]);
 	});
 
-	it('flags a malformed redirect_to', () => {
-		const result = parseContract({ redirect_to: 'Note without brackets' });
+	it('flags a malformed redirect-to', () => {
+		const result = parseContract({ 'redirect-to': 'Note without brackets' });
 		expect(result.issues).toEqual([
-			expect.objectContaining({ property: 'redirect_to', code: 'malformed-wikilink' }),
+			expect.objectContaining({ property: 'redirect-to', code: 'malformed-wikilink' }),
 		]);
 	});
 
-	it('flags redirects_from when not a list', () => {
-		const result = parseContract({ redirects_from: '[[Old name]]' });
+	it('flags redirects-from when not a list', () => {
+		const result = parseContract({ 'redirects-from': '[[Old name]]' });
 		expect(result.redirectsFrom).toEqual([]);
 		expect(result.issues).toEqual([
-			expect.objectContaining({ property: 'redirects_from', code: 'not-a-list' }),
+			expect.objectContaining({ property: 'redirects-from', code: 'not-a-list' }),
 		]);
 	});
 
 	it('flags individual malformed entries in a list but keeps the valid ones', () => {
 		const result = parseContract({
-			redirects_from: ['[[Valid]]', 'not a link', 42, ''],
+			'redirects-from': ['[[Valid]]', 'not a link', 42, ''],
 		});
 		expect(result.redirectsFrom).toHaveLength(1);
 		expect(result.redirectsFrom[0]!.path).toBe('Valid');
@@ -98,5 +103,40 @@ describe('parseContract', () => {
 		const result = parseContract({ swallows: ['Valid term', 42, '  '] });
 		expect(result.swallows).toEqual(['Valid term']);
 		expect(result.issues.map((i) => i.code)).toEqual(['not-a-string', 'empty-value']);
+	});
+});
+
+describe('configurable property keys', () => {
+	const legacy = { redirectTo: 'redirect_to', redirectsFrom: 'redirects_from' };
+
+	it('defaults to hyphenated names and ignores the underscore forms', () => {
+		const fm = { 'redirect-to': '[[A]]', 'redirects-from': ['[[B]]'] };
+		const parsed = parseContract(fm);
+		expect(parsed.redirectTo?.path).toBe('A');
+		expect(parsed.redirectsFrom).toHaveLength(1);
+		expect(parseContract({ redirect_to: '[[A]]' }).redirectTo).toBeUndefined();
+	});
+
+	it('reads custom names passed explicitly', () => {
+		const parsed = parseContract({ redirect_to: '[[A]]', redirects_from: ['[[B]]'] }, legacy);
+		expect(parsed.redirectTo?.path).toBe('A');
+		expect(parsed.redirectsFrom).toHaveLength(1);
+	});
+
+	it('reads the active keys after setPropertyKeys', () => {
+		setPropertyKeys(legacy);
+		try {
+			expect(parseContract({ redirect_to: '[[A]]' }).redirectTo?.path).toBe('A');
+		} finally {
+			setPropertyKeys(DEFAULT_PROPERTY_KEYS);
+		}
+	});
+
+	it('rejects unusable or colliding names', () => {
+		expect(validatePropertyKey('  ', 'x')).toBeUndefined();
+		expect(validatePropertyKey('a b', 'x')).toBeUndefined();
+		expect(validatePropertyKey('Swallows', 'x')).toBeUndefined();
+		expect(validatePropertyKey('REDIRECTS-FROM', 'redirects-from')).toBeUndefined();
+		expect(validatePropertyKey(' my-key ', 'x')).toBe('my-key');
 	});
 });

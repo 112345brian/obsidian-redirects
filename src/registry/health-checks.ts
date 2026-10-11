@@ -1,6 +1,6 @@
 /**
  * The health checks behind the registry's read-only health report (issue
- * #2): broken targets, redirect cycles/chains, reciprocal `redirects_from`
+ * #2): broken targets, redirect cycles/chains, reciprocal `redirects-from`
  * mismatches, duplicate claims, and promotion candidates. Pure functions
  * over a built `RegistryState` — no vault access, no mutation.
  */
@@ -19,6 +19,7 @@ import {
 	staleSwallowClaimIssue,
 	swallowAliasConflictIssue,
 } from './health';
+import { redirectToKey } from '../contract/frontmatter';
 import { VaultIndex } from './resolver';
 import { RedirectEntry, RegistryState, pathClaimKey } from './state';
 
@@ -26,7 +27,7 @@ export function computeHealthIssues(state: RegistryState, index: VaultIndex): He
 	const issues: HealthIssue[] = [];
 
 	for (const [path, entry] of state.redirects) {
-		issues.push(...checkBrokenTarget(path, 'redirect_to', entry));
+		issues.push(...checkBrokenTarget(path, redirectToKey(), entry));
 	}
 
 	for (const [, entry] of state.disambiguations) {
@@ -189,7 +190,7 @@ function checkReciprocals(state: RegistryState): HealthIssue[] {
 		for (const claim of claims) {
 			// `related` carries the claim's exact raw wikilink text (not a
 			// resolved path) so a repair command can remove precisely the
-			// entry that is actually written in `redirects_from`.
+			// entry that is actually written in `redirects-from`.
 			if (!claim.resolved.file) {
 				issues.push(
 					staleReciprocalIssue(
@@ -209,13 +210,13 @@ function checkReciprocals(state: RegistryState): HealthIssue[] {
 					staleReciprocalIssue(
 						claim.claimant.path,
 						claim.target.raw,
-						'that note has no redirect_to declared',
+						`that note has no ${redirectToKey()} declared`,
 					),
 				);
 				continue;
 			}
 
-			// Compare files, not exact status: a stub whose redirect_to has a
+			// Compare files, not exact status: a stub whose redirect-to has a
 			// broken heading/block still identifies the right file, and that
 			// fragment problem is already reported as its own broken-target
 			// issue — it shouldn't also masquerade as a reciprocal mismatch.
@@ -224,7 +225,7 @@ function checkReciprocals(state: RegistryState): HealthIssue[] {
 					staleReciprocalIssue(
 						claim.claimant.path,
 						claim.target.raw,
-						"that note's redirect_to does not point back here",
+						`that note's ${redirectToKey()} does not point back here`,
 					),
 				);
 			}

@@ -3,16 +3,16 @@
  * frontmatter properties this plugin defines. Values must be native
  * wikilinks so Obsidian's own renamer keeps them in sync.
  *
- *   redirect_to:    "[[Canonical note#Heading]]"   (single wikilink)
- *   redirects_from:
+ *   redirect-to:    "[[Canonical note#Heading]]"   (single wikilink)
+ *   redirects-from:
  *     - "[[Old name]]"                              (list of wikilinks)
  *   disambiguates:
  *     - "[[Candidate A]]"                           (list of wikilinks)
  *   swallows:
  *     - "R package"                                 (list of literal terms)
  *
- * `redirect_to` is the source of truth for where a stub points.
- * `redirects_from` is a reciprocal declaration used only for indexing and
+ * `redirect-to` is the source of truth for where a stub points.
+ * `redirects-from` is a reciprocal declaration used only for indexing and
  * validation — the registry (issue #2) treats a mismatch as a warning, not
  * an error, and never rewrites files. `swallows` (issue #10) is different in
  * kind: its entries are literal display terms a canonical note claims, not
@@ -22,10 +22,51 @@
 
 import { parseWikilink, WikilinkTarget } from './wikilink';
 
-export const REDIRECT_TO_KEY = 'redirect_to';
-export const REDIRECTS_FROM_KEY = 'redirects_from';
+/** The two property names the user may rename in settings. The other two
+ * (`disambiguates`, `swallows`) are fixed. */
+export interface PropertyKeys {
+	redirectTo: string;
+	redirectsFrom: string;
+}
+
+export const DEFAULT_PROPERTY_KEYS: PropertyKeys = {
+	redirectTo: 'redirect-to',
+	redirectsFrom: 'redirects-from',
+};
 export const DISAMBIGUATES_KEY = 'disambiguates';
 export const SWALLOWS_KEY = 'swallows';
+
+let activeKeys: PropertyKeys = DEFAULT_PROPERTY_KEYS;
+
+/** Sets the property names used everywhere a caller doesn't pass its own. */
+export function setPropertyKeys(keys: PropertyKeys): void {
+	activeKeys = { ...keys };
+}
+
+export function getPropertyKeys(): PropertyKeys {
+	return activeKeys;
+}
+
+export function redirectToKey(): string {
+	return activeKeys.redirectTo;
+}
+
+export function redirectsFromKey(): string {
+	return activeKeys.redirectsFrom;
+}
+
+/** Returns the trimmed name if it is usable as a frontmatter property that
+ * doesn't collide with another contract property, else undefined. */
+export function validatePropertyKey(
+	value: string,
+	otherKey: string,
+): string | undefined {
+	const trimmed = value.trim();
+	if (!trimmed || /[\s:#[\]{}"',]/.test(trimmed)) return undefined;
+	const lower = trimmed.toLowerCase();
+	const reserved = [DISAMBIGUATES_KEY, SWALLOWS_KEY, otherKey.toLowerCase()];
+	return reserved.includes(lower) ? undefined : trimmed;
+}
 
 export type ContractIssueCode =
 	| 'not-a-string'
@@ -61,6 +102,7 @@ export interface ParsedContract {
  */
 export function parseContract(
 	frontmatter: Record<string, unknown> | undefined | null,
+	keys: PropertyKeys = activeKeys,
 ): ParsedContract {
 	const issues: ContractIssue[] = [];
 	const result: ParsedContract = {
@@ -72,19 +114,19 @@ export function parseContract(
 
 	if (!frontmatter) return result;
 
-	if (REDIRECT_TO_KEY in frontmatter) {
+	if (keys.redirectTo in frontmatter) {
 		const target = parseSingleWikilinkProperty(
-			REDIRECT_TO_KEY,
-			frontmatter[REDIRECT_TO_KEY],
+			keys.redirectTo,
+			frontmatter[keys.redirectTo],
 			issues,
 		);
 		if (target) result.redirectTo = target;
 	}
 
-	if (REDIRECTS_FROM_KEY in frontmatter) {
+	if (keys.redirectsFrom in frontmatter) {
 		result.redirectsFrom = parseWikilinkListProperty(
-			REDIRECTS_FROM_KEY,
-			frontmatter[REDIRECTS_FROM_KEY],
+			keys.redirectsFrom,
+			frontmatter[keys.redirectsFrom],
 			issues,
 		);
 	}

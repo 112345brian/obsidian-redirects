@@ -1,4 +1,5 @@
 import { App, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { DEFAULT_PROPERTY_KEYS, PropertyKeys, validatePropertyKey } from '../contract/frontmatter';
 import { RedirectsPluginData } from '../data/plugin-data';
 
 export interface SettingsTabHost {
@@ -19,6 +20,25 @@ export class RedirectsSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
+		new Setting(containerEl).setName('Frontmatter properties').setHeading();
+
+		this.addPropertyKeySetting(
+			containerEl,
+			'Redirect target property',
+			'On a redirect stub, the property holding a single wikilink to the canonical note.',
+			'redirectTo',
+			'redirectsFrom',
+		);
+		this.addPropertyKeySetting(
+			containerEl,
+			'Reciprocal list property',
+			'On a canonical note, the property listing the stubs that redirect to it.',
+			'redirectsFrom',
+			'redirectTo',
+		);
+
+		new Setting(containerEl).setName('Behavior').setHeading();
+
 		new Setting(containerEl)
 			.setName('Promotable link threshold')
 			.setDesc(
@@ -35,7 +55,7 @@ export class RedirectsSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName('Auto-sync missing reciprocal declarations')
 			.setDesc(
-				'Add a missing redirects_from entry automatically after every save. Turn this off to leave it for the health report\'s "Fix" action or the "Repair a reciprocal redirect declaration" command instead.',
+				'Add a missing reciprocal entry automatically after every save. Turn this off to leave it for the health report\'s "Fix" action or the "Repair a reciprocal redirect declaration" command instead.',
 			)
 			.addToggle((toggle) =>
 				toggle.setValue(this.host.getData().autoSyncReciprocals).onChange((value) => {
@@ -56,6 +76,34 @@ export class RedirectsSettingTab extends PluginSettingTab {
 						.filter(Boolean);
 					void this.host.saveData({ ...this.host.getData(), ignoredFolders: folders });
 				}),
+			);
+	}
+
+	private addPropertyKeySetting(
+		containerEl: HTMLElement,
+		name: string,
+		desc: string,
+		key: keyof PropertyKeys,
+		otherKey: keyof PropertyKeys,
+	): void {
+		new Setting(containerEl)
+			.setName(name)
+			.setDesc(
+				`${desc} Default: ${DEFAULT_PROPERTY_KEYS[key]}. Existing notes using a different name stop being recognized until you rename the property in them or here.`,
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder(DEFAULT_PROPERTY_KEYS[key])
+					.setValue(this.host.getData().propertyKeys[key])
+					.onChange((value) => {
+						const data = this.host.getData();
+						const valid = validatePropertyKey(value, data.propertyKeys[otherKey]);
+						if (!valid || valid === data.propertyKeys[key]) return;
+						void this.host.saveData({
+							...data,
+							propertyKeys: { ...data.propertyKeys, [key]: valid },
+						});
+					}),
 			);
 	}
 }

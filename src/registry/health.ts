@@ -1,3 +1,4 @@
+import { redirectsFromKey } from '../contract/frontmatter';
 import { WikilinkTarget, formatWikilink } from '../contract/wikilink';
 
 export type HealthIssueType =
@@ -60,7 +61,7 @@ export function missingReciprocalIssue(
 	return {
 		type: 'missing-reciprocal',
 		path: canonicalPath,
-		message: `"${canonicalPath}" does not list "${stubPath}" in redirects_from, but "${stubPath}" redirects to it.`,
+		message: `"${canonicalPath}" does not list "${stubPath}" in ${redirectsFromKey()}, but "${stubPath}" redirects to it.`,
 		related: [stubPath],
 	};
 }
@@ -73,7 +74,7 @@ export function staleReciprocalIssue(
 	return {
 		type: 'stale-reciprocal',
 		path: canonicalPath,
-		message: `"${canonicalPath}" claims "${claimedStubPath}" in redirects_from, but ${reason}.`,
+		message: `"${canonicalPath}" claims "${claimedStubPath}" in ${redirectsFromKey()}, but ${reason}.`,
 		related: [claimedStubPath],
 	};
 }

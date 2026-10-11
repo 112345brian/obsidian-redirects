@@ -18,7 +18,7 @@
 
 import { App, Notice, TFile } from 'obsidian';
 import { withWikilinkAdded, withWikilinkRemoved } from '../authoring/mutations';
-import { REDIRECTS_FROM_KEY } from '../contract/frontmatter';
+import { redirectsFromKey } from '../contract/frontmatter';
 import { formatWikilink } from '../contract/wikilink';
 import { HealthIssue } from './health';
 import { RedirectRegistry } from './registry';
@@ -46,14 +46,14 @@ export async function applyReciprocalFix(app: App, issue: HealthIssue): Promise<
 			raw: formatWikilink({ path: related.replace(/\.md$/i, '') }),
 		};
 		await app.fileManager.processFrontMatter(canonicalFile, (fm: Record<string, unknown>) => {
-			fm[REDIRECTS_FROM_KEY] = withWikilinkAdded(fm[REDIRECTS_FROM_KEY], stubTarget);
+			fm[redirectsFromKey()] = withWikilinkAdded(fm[redirectsFromKey()], stubTarget);
 		});
 	} else {
 		// `related` is the claim's exact raw wikilink text (see
 		// `staleReciprocalIssue`) — removing anything else risks leaving the
 		// actually-written entry untouched.
 		await app.fileManager.processFrontMatter(canonicalFile, (fm: Record<string, unknown>) => {
-			fm[REDIRECTS_FROM_KEY] = withWikilinkRemoved(fm[REDIRECTS_FROM_KEY], related);
+			fm[redirectsFromKey()] = withWikilinkRemoved(fm[redirectsFromKey()], related);
 		});
 	}
 

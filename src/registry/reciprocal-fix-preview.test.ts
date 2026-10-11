@@ -10,7 +10,7 @@ describe('reciprocalFixPreview', () => {
 				message: 'irrelevant here',
 				related: ['Stub.md'],
 			}),
-		).toEqual(['Add to "Canonical.md":', '  redirects_from: [..., "[[Stub]]"]']);
+		).toEqual(['Add to "Canonical.md":', '  redirects-from: [..., "[[Stub]]"]']);
 	});
 
 	it('previews removing a stale reciprocal using the exact raw wikilink text', () => {
@@ -21,6 +21,6 @@ describe('reciprocalFixPreview', () => {
 				message: 'irrelevant here',
 				related: ['[[Old stub]]'],
 			}),
-		).toEqual(['Remove from "Canonical.md":', '  redirects_from: "[[Old stub]]"']);
+		).toEqual(['Remove from "Canonical.md":', '  redirects-from: "[[Old stub]]"']);
 	});
 });

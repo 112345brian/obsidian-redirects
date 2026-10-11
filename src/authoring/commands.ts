@@ -10,8 +10,8 @@
 import { App, Editor, Notice, TFile } from 'obsidian';
 import {
 	DISAMBIGUATES_KEY,
-	REDIRECTS_FROM_KEY,
-	REDIRECT_TO_KEY,
+	redirectsFromKey,
+	redirectToKey,
 } from '../contract/frontmatter';
 import { WikilinkTarget, formatWikilink } from '../contract/wikilink';
 import { RedirectRegistry } from '../registry/registry';
@@ -49,10 +49,10 @@ export async function createRedirectStubNamed(
 
 	const preview = [
 		`Create "${stubPath}" with:`,
-		`  ${REDIRECT_TO_KEY}: "${formatWikilink(target)}"`,
+		`  ${redirectToKey()}: "${formatWikilink(target)}"`,
 	];
 	if (canonicalPath) {
-		preview.push('', `Add to "${canonicalPath}":`, `  ${REDIRECTS_FROM_KEY}: [..., "[[${stubPath.replace(/\.md$/i, '')}]]"]`);
+		preview.push('', `Add to "${canonicalPath}":`, `  ${redirectsFromKey()}: [..., "[[${stubPath.replace(/\.md$/i, '')}]]"]`);
 	} else {
 		preview.push('', `("${target.path}" does not resolve to an existing file — no reciprocal declaration will be added.)`);
 	}
@@ -60,14 +60,14 @@ export async function createRedirectStubNamed(
 	const confirmed = await confirmMutation(app, 'Create redirect stub', preview);
 	if (!confirmed) return false;
 
-	await app.vault.create(stubPath, stubFrontmatterText(REDIRECT_TO_KEY, target));
+	await app.vault.create(stubPath, stubFrontmatterText(redirectToKey(), target));
 
 	if (canonicalPath) {
 		const stubTarget = { path: stubPath.replace(/\.md$/i, ''), raw: formatWikilink({ path: stubPath.replace(/\.md$/i, '') }) };
 		const canonicalFile = app.vault.getAbstractFileByPath(canonicalPath);
 		if (canonicalFile instanceof TFile) {
 			await app.fileManager.processFrontMatter(canonicalFile, (fm: Record<string, unknown>) => {
-				fm[REDIRECTS_FROM_KEY] = withWikilinkAdded(fm[REDIRECTS_FROM_KEY], stubTarget);
+				fm[redirectsFromKey()] = withWikilinkAdded(fm[redirectsFromKey()], stubTarget);
 			});
 		}
 	}

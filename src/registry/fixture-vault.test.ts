@@ -13,10 +13,10 @@ import { file, vaultOf } from './test-helpers';
 function buildFixtureVault() {
 	return vaultOf([
 		// A straightforward stub -> canonical redirect, correctly reciprocated.
-		file({ path: 'Old name.md', frontmatter: { redirect_to: '[[Canonical]]' } }),
+		file({ path: 'Old name.md', frontmatter: { 'redirect-to': '[[Canonical]]' } }),
 		file({
 			path: 'Canonical.md',
-			frontmatter: { redirects_from: ['[[Old name]]'] },
+			frontmatter: { 'redirects-from': ['[[Old name]]'] },
 			aliases: ['Canon'],
 			headings: ['Overview', 'Details'],
 			blockIds: ['intro'],
@@ -24,20 +24,20 @@ function buildFixtureVault() {
 
 		// A chain: Hop A -> Hop B -> Canonical (already targeted, so it's not
 		// double-reported as its own chain).
-		file({ path: 'Hop A.md', frontmatter: { redirect_to: '[[Hop B]]' } }),
-		file({ path: 'Hop B.md', frontmatter: { redirect_to: '[[Canonical]]' } }),
+		file({ path: 'Hop A.md', frontmatter: { 'redirect-to': '[[Hop B]]' } }),
+		file({ path: 'Hop B.md', frontmatter: { 'redirect-to': '[[Canonical]]' } }),
 
 		// A genuine two-note cycle.
-		file({ path: 'Cycle A.md', frontmatter: { redirect_to: '[[Cycle B]]' } }),
-		file({ path: 'Cycle B.md', frontmatter: { redirect_to: '[[Cycle A]]' } }),
+		file({ path: 'Cycle A.md', frontmatter: { 'redirect-to': '[[Cycle B]]' } }),
+		file({ path: 'Cycle B.md', frontmatter: { 'redirect-to': '[[Cycle A]]' } }),
 
 		// A redirect stub with a broken heading fragment.
-		file({ path: 'Broken fragment stub.md', frontmatter: { redirect_to: '[[Canonical#Nope]]' } }),
+		file({ path: 'Broken fragment stub.md', frontmatter: { 'redirect-to': '[[Canonical#Nope]]' } }),
 
 		// A promotion candidate: a stub that has grown real content.
 		file({
 			path: 'Grew content.md',
-			frontmatter: { redirect_to: '[[Canonical]]' },
+			frontmatter: { 'redirect-to': '[[Canonical]]' },
 			hasBodyContent: true,
 		}),
 
