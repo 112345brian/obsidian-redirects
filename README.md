@@ -129,6 +129,19 @@ that judgment call changes.*
   just means applying it yourself, via the health report's "Fix" button or
   the "Repair a reciprocal redirect declaration" command — the check itself
   always runs either way.
+- **Sync redirect target from the reciprocal list** — the reverse of the
+  setting above: a note listed in a canonical note's `redirects-from` that
+  has no `redirects-to` and no body content gets one pointing back (default
+  off). An existing `redirects-to`, even a malformed one, is never
+  overwritten, and a stub claimed by several canonical notes is skipped.
+- **Add stub names as aliases on the canonical note** / **Add the canonical
+  name as an alias on each stub** — keep `aliases` in step with every
+  stub/canonical pair declared from either side (default off). Existing
+  aliases are matched case-insensitively and never duplicated. A real
+  filename now outranks another note's alias of the same name when a link
+  is resolved, so these aliases don't make bare links ambiguous.
+- **Add swallowed terms as aliases** — every term in a note's `swallows`
+  list is also added to that note's own `aliases` (default off).
 - **Promotable link threshold** — minimum distinct source notes before an
   unresolved link is surfaced (default 2).
 - **Ignored folders** — vault-relative folders excluded from the

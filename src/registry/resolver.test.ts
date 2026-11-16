@@ -68,6 +68,24 @@ describe('resolveTarget', () => {
 		expect(result.file?.path).toBe('folder/Note.md');
 	});
 
+	it('lets a real filename outrank another note\'s alias of the same name', () => {
+		const index = new VaultIndex([
+			file({ path: 'Maths/Mathematics.md' }),
+			file({ path: 'Legacy/Math.md', aliases: ['Mathematics'] }),
+		]);
+		const result = resolveTarget(parseWikilink('[[Mathematics]]')!, index);
+		expect(result.status).toBe('resolved');
+		expect(result.file?.path).toBe('Maths/Mathematics.md');
+	});
+
+	it('still flags two alias holders as ambiguous when no filename matches', () => {
+		const index = new VaultIndex([
+			file({ path: 'a.md', aliases: ['Shared'] }),
+			file({ path: 'b.md', aliases: ['Shared'] }),
+		]);
+		expect(resolveTarget(parseWikilink('[[Shared]]')!, index).status).toBe('ambiguous-note');
+	});
+
 	it('flags duplicate titles as ambiguous-note', () => {
 		const index = new VaultIndex([
 			file({ path: 'a/Duplicate.md' }),

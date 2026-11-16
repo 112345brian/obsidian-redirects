@@ -18,6 +18,10 @@ describe('mergePluginData', () => {
 				handledHeadingCollisions: ['A.md#vector'],
 				dismissedSwallowPrompts: ['A.md::R package'],
 				autoSyncReciprocals: false,
+				autoSyncRedirectsTo: true,
+				aliasStubOnCanonical: true,
+				aliasCanonicalOnStub: true,
+				aliasSwallowedTerms: true,
 			}),
 		).toEqual({
 			dismissedPromotableTargets: ['term'],
@@ -26,8 +30,20 @@ describe('mergePluginData', () => {
 			handledHeadingCollisions: ['A.md#vector'],
 			dismissedSwallowPrompts: ['A.md::R package'],
 			autoSyncReciprocals: false,
+			autoSyncRedirectsTo: true,
+			aliasStubOnCanonical: true,
+			aliasCanonicalOnStub: true,
+			aliasSwallowedTerms: true,
 			propertyKeys: { redirectTo: 'redirects-to', redirectsFrom: 'redirects-from' },
 		});
+	});
+
+	it('defaults the new sync and alias options to off, and ignores non-boolean values', () => {
+		const merged = mergePluginData({ autoSyncRedirectsTo: 'yes', aliasSwallowedTerms: 1 });
+		expect(merged.autoSyncRedirectsTo).toBe(false);
+		expect(merged.aliasStubOnCanonical).toBe(false);
+		expect(merged.aliasCanonicalOnStub).toBe(false);
+		expect(merged.aliasSwallowedTerms).toBe(false);
 	});
 
 	it('keeps valid custom property keys and falls back for invalid ones', () => {

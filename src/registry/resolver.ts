@@ -78,7 +78,15 @@ export function resolveTarget(
 	index: VaultIndex,
 ): ResolvedTarget {
 	const byPath = index.findByPath(target.path);
-	const candidates = byPath ? [byPath] : index.findByName(target.path);
+	// A real filename always outranks an alias, as in Obsidian itself: without
+	// this, adding a note's name as an alias on another note (what the
+	// alias auto-sync does) would make every bare link to it "ambiguous".
+	const basenameHits = byPath ? [] : index.findByBasename(target.path);
+	const candidates = byPath
+		? [byPath]
+		: basenameHits.length > 0
+			? basenameHits
+			: index.findByName(target.path);
 
 	if (candidates.length === 0) {
 		return { status: 'unresolved-note', target };

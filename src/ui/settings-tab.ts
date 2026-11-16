@@ -1,6 +1,6 @@
 import { App, Plugin, PluginSettingTab, Setting } from 'obsidian';
 import { DEFAULT_PROPERTY_KEYS, PropertyKeys, validatePropertyKey } from '../contract/frontmatter';
-import { RedirectsPluginData } from '../data/plugin-data';
+import { RedirectsPluginData, ToggleKey } from '../data/plugin-data';
 
 export interface SettingsTabHost {
 	getData(): RedirectsPluginData;
@@ -63,6 +63,33 @@ export class RedirectsSettingTab extends PluginSettingTab {
 				}),
 			);
 
+		new Setting(containerEl).setName('Two-way sync and aliases').setHeading();
+
+		this.addToggle(
+			containerEl,
+			'Sync redirect target from the reciprocal list',
+			'When a canonical note lists a note in its reciprocal list property, give that note a redirect target pointing back — but only if it has none and no body content. Never overwrites an existing one. Applies from the next save of any note.',
+			'autoSyncRedirectsTo',
+		);
+		this.addToggle(
+			containerEl,
+			'Add stub names as aliases on the canonical note',
+			'Add each stub\'s name to its canonical note\'s aliases.',
+			'aliasStubOnCanonical',
+		);
+		this.addToggle(
+			containerEl,
+			'Add the canonical name as an alias on each stub',
+			'Add the canonical note\'s name to each stub\'s aliases.',
+			'aliasCanonicalOnStub',
+		);
+		this.addToggle(
+			containerEl,
+			'Add swallowed terms as aliases',
+			'Add every term in a note\'s swallows list to that note\'s own aliases.',
+			'aliasSwallowedTerms',
+		);
+
 		new Setting(containerEl)
 			.setName('Ignored folders')
 			.setDesc(
@@ -75,6 +102,22 @@ export class RedirectsSettingTab extends PluginSettingTab {
 						.map((line) => line.trim())
 						.filter(Boolean);
 					void this.host.saveData({ ...this.host.getData(), ignoredFolders: folders });
+				}),
+			);
+	}
+
+	private addToggle(
+		containerEl: HTMLElement,
+		name: string,
+		desc: string,
+		key: ToggleKey,
+	): void {
+		new Setting(containerEl)
+			.setName(name)
+			.setDesc(desc)
+			.addToggle((toggle) =>
+				toggle.setValue(this.host.getData()[key]).onChange((value) => {
+					void this.host.saveData({ ...this.host.getData(), [key]: value });
 				}),
 			);
 	}

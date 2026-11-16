@@ -6,6 +6,7 @@
 
 import { parseContract } from '../contract/frontmatter';
 import { computeHealthIssues } from './health-checks';
+import { RedirectPair, computeRedirectPairs } from './redirect-pairs';
 import { HealthIssue } from './health';
 import { ResolvedTarget, VaultIndex, resolveTarget } from './resolver';
 import {
@@ -153,6 +154,12 @@ export class RedirectRegistry {
 		}
 
 		return last?.resolved;
+	}
+
+	/** Every stub/canonical pair declared from either side (see
+	 * `computeRedirectPairs`). */
+	getRedirectPairs(): RedirectPair[] {
+		return computeRedirectPairs(this.state);
 	}
 
 	getHealthReport(): HealthIssue[] {

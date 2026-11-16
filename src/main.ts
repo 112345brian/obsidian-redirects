@@ -12,7 +12,9 @@ import { ObsidianVaultSource } from './obsidian-adapter';
 import { RedirectNavigator } from './navigation/navigator';
 import { showPromotableLinks } from './promotable/router';
 import { RedirectRegistry } from './registry/registry';
-import { applyReciprocalFix, syncMissingReciprocals } from './registry/reciprocal-sync';
+import { runAutoSync } from './registry/auto-sync';
+import { applyReciprocalFix } from './registry/reciprocal-sync';
+import { createSwallowAliasHandler } from './swallow/alias-sync';
 import { createNewClaimHandler } from './swallow/new-claim-router';
 import { SwallowRouterOptions, createSwallowChangeHandler } from './swallow/router';
 import { HealthReportModal } from './ui/health-modal';
@@ -50,9 +52,7 @@ export default class RedirectsPlugin extends Plugin {
 				// right after every rebuild — see reciprocal-sync.ts. Opt-out via
 				// the "Auto-sync missing reciprocal declarations" setting still
 				// leaves it visible in the health report with a one-click "Fix".
-				if (this.registry && this.data.autoSyncReciprocals) {
-					void syncMissingReciprocals(this.app, this.registry);
-				}
+				if (this.registry) void runAutoSync(this.app, this.registry, this.data);
 			},
 			REBUILD_DEBOUNCE_MS,
 			true,
@@ -103,6 +103,16 @@ export default class RedirectsPlugin extends Plugin {
 			this.app.metadataCache.on(
 				'changed',
 				createSwallowChangeHandler(this.app, this.swallowRouterOptions()),
+			),
+		);
+
+		this.registerEvent(
+			this.app.metadataCache.on(
+				'changed',
+				createSwallowAliasHandler(this.app, {
+					isEnabled: () => this.data.aliasSwallowedTerms,
+					getIgnoredFolders: () => this.data.ignoredFolders,
+				}),
 			),
 		);
 
